@@ -1,0 +1,325 @@
+/*================ RESPONSIVO NANTE - SEM QUEBRAR ESTRUTURA ==================*/
+
+/* TABLET: até 1024px */
+@media (max-width: 1024px) {
+    body {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 5px;
+    }
+    .ninho.win {
+    width: 20px;
+    height: 5%;
+    position: absolute;
+    left: 30px;
+    background: rgb(44, 31, 161);
+    z-index: 1000;
+    }
+    .ninho.win{
+        transform: scale(0.5);
+    }
+    #ninho-4-2 {    
+      left: 34.3%;
+      bottom: 45%;
+    }
+    #ninho-4-0 {    
+      left: 34.3%;
+      bottom: 40%;
+    }
+    #ninho-4-3 {    
+      left: 32.8%;
+      bottom: 42%;
+    }
+    #ninho-4-1 {    
+      left: 34.7%;
+      bottom: 42%;
+    }
+
+    .title {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        font-size: 1.5rem;
+        padding: 5px 15px;
+        border-radius: 10px;
+    }
+
+    main {
+        width: 65%;
+        height: 550px;
+        overflow: hidden; /* mantém a cruz inteira */
+    }
+
+    .nante_modal {
+        padding: 10px;
+
+    }
+
+    .play_box {
+        width: 33%;
+        height: 550px;
+    }
+
+    /* Players ficam menores mas no mesmo lugar */
+    .P1, .P2, .P3, .P4 {
+        right: 35%;
+        bottom: 380px;
+        width: 120px;
+        font-size: 0.9rem;
+        scale: 0.9;
+    }
+
+    .roolBtn {
+        right: 8%;
+        bottom: 10px;
+        width: 90px;
+        height: 90px;
+        position: fixed;
+    }
+}
+
+
+/* MOBILE PORTRAIT: até 480px */
+@media (max-width: 480px) {
+    main {
+        width: 100%;
+        height: 420px;
+    }
+
+    .nante_modal {
+        transform: scale(0.5); /* bem pequeno mas intacto */
+        min-width: 650px;
+        
+    }
+
+    .title {
+        font-size: 1.1rem;
+    }
+
+    .play_box {
+        width: 100%;
+    }
+
+    .P1, .P2, .P3, .P4 {
+        top: 50px;
+        width: 100px;
+        font-size: 0.75rem;
+    }
+    .P2{ top: 85px; }
+    .P3{ top: 120px; }
+    .P4{ top: 155px; }
+}
+/* ===== CORREÇÃO DOS DADOS ===== */
+
+/* TABLET */
+@media (max-width: 1024px) {
+    .diceTable {
+        height: auto;
+        min-height: 220px;
+        padding: 10px;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .dice, .dice3, .dice4, .dice5, .dice6 {
+        margin: 8px; /* tirei o margin: 80px */
+        width: 50px;
+        height: 60px;
+        flex-shrink: 0;
+    }
+}
+
+/* MOBILE */
+/* MOBILE PEQUENO */
+@media (max-width: 480px) {
+    .diceTable {
+        gap: 4px;
+        padding: 5px;
+    }
+    .dice, .dice3, .dice4, .dice5, .dice6 {
+        width: 38px;
+        height: 45px;
+        margin: 3px;
+    }
+    .dice .K1, 
+    .dice3 .L1, .dice4 .L1, .dice5 .L1, .dice6 .L1 {
+        width: 7px;
+        height: 7px;
+    }
+}/*================ CORREÇÃO DADOS MOBILE ==================*/
+
+@media (max-width: 768px) {
+    .diceTable {
+        min-height: 200px;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .dice, .dice3, .dice4, .dice5, .dice6 {
+        width: 45px;
+        height: 55px;
+    }
+    
+    /* Bolinhas menores */
+    .lin1, .lin2, .lin3 {
+        height: 12px;
+        width: 100%;
+        margin-top: 3px;
+        display: flex;
+        justify-content: space-evenly;
+    }
+    .dice .K1, 
+    .dice3 .L1, .dice4 .L1, .dice5 .L1, .dice6 .L1 {
+        width: 9px;
+        height: 9px;
+        margin: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .diceTable {
+        min-height: 160px;
+        gap: 4px;
+    }
+    .dice, .dice3, .dice4, .dice5, .dice6 {
+        width: 38px;
+        height: 48px;
+    }
+}
+
+/*================ TABULEIRO COM ZOOM/PAN EM LANDSCAPE ==================*/
+/* (a .board-viewport real fica definida dentro do media query de landscape mais abaixo) */
+
+@media (max-width: 1024px) and (orientation: landscape) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    position: relative;
+  }
+
+  .title {
+    display: none; /* poupa espaço, escasso em landscape de telemóvel */
+  }
+
+  /* Janela fixa que recorta a vista - o JS aplica zoom/pan DENTRO dela, ao #main */
+  .board-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: none; /* o JS trata dos gestos - evita o scroll nativo a competir */
+  }
+
+  /* #main é o bloco que roda/escala como um todo - peças, ninhos e casas ficam
+     sempre alinhados entre si porque são todos filhos dele e escalam juntos */
+  main {
+    width: 900px;
+    height: 600px;
+    position: relative;
+  }
+
+  /* Caixa dos dados fixa, FORA do viewport - nunca cresce nem se move com o zoom */
+  .play_box {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    width: 150px;
+    height: auto;
+    z-index: 2000;
+    padding: 8px;
+  }
+
+  .roolBtn {
+    position: static;
+    width: 70px;
+    height: 70px;
+    font-size: 14px;
+    margin: 0 auto 6px;
+    display: block;
+  }
+
+  .diceTable {
+    width: 100%;
+    height: auto;
+    min-height: 90px;
+    margin: 0;
+    padding: 4px;
+  }
+
+  .dice, .dice3, .dice4, .dice5, .dice6 {
+    width: 40px;
+    height: 55px;
+    margin: 3px;
+  }
+
+  .P1, .P2, .P3, .P4 {
+    top: 8px;
+    left: 8px;
+    right: auto;
+    bottom: auto;
+    width: 90px;
+    font-size: 0.7rem;
+    z-index: 2000;
+  }
+
+  .zoom-controls {
+    position: fixed;
+    bottom: 8px;
+    left: 8px;
+    z-index: 2000;
+    display: flex;
+    gap: 6px;
+  }
+
+  .zoom-controls button {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #fff;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  /* DIAGNÓSTICO TEMPORÁRIO - remover depois de confirmar o alinhamento */
+  .ninho[data-jogador="0"] { background: red !important; outline: 2px solid white; }
+  .ninho[data-jogador="1"] { background: yellow !important; outline: 2px solid white; }
+  .ninho[data-jogador="2"] { background: blue !important; outline: 2px solid white; }
+  .ninho[data-jogador="3"] { background: orange !important; outline: 2px solid white; }
+}
+
+/* Fora do landscape de telemóvel, os botões de zoom não fazem sentido - escondidos */
+.zoom-controls {
+  display: none;
+}
+
+/* ===== Correção dos pontos dos dados =====
+   As margens do nante.css foram pensadas para o dado grande (60x70px) do ecrã de secretária.
+   Em qualquer tamanho menor, isso desalinha ou faz transbordar os pontos. Substituímos por
+   distribuição flexível, sem margens fixas em pixels. */
+/* .dice .S1 {
+  margin: auto;
+} */
+/* .dice .K1 {
+  margin: 0; 
+} */
+/* .dice3 .L1, .dice4 .L1, .dice5 .L1, .dice6 .L1 {
+  margin: 0 !important; 
+} */
+/* .lin1, .lin2, .lin3 {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100%;
+  margin-top: 0;
+} */

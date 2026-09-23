@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Nante - Lobby (teste)</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #fff; padding: 40px; }
+  input, select, button { font-size: 16px; padding: 8px; margin: 4px; }
+  #lista { margin-top: 20px; }
+  .jogador { padding: 6px 10px; background: #222; margin: 4px 0; border-radius: 6px; }
+  #status { font-weight: bold; margin-top: 20px; color: #4caf50; }
+</style>
+</head>
+<body>
+  <h1>Nante — teste de Lobby</h1>
+
+  <div>
+    <input id="nome" placeholder="O teu nome" value="">
+    <select id="totalPlayers">
+      <option value="2">2 jogadores</option>
+      <option value="3">3 jogadores</option>
+      <option value="4" selected>4 jogadores</option>
+    </select>
+    <select id="totalPecas">
+      <option value="1">1 peça</option>
+      <option value="2">2 peças</option>
+      <option value="3">3 peças</option>
+      <option value="4" selected>4 peças</option>
+    </select>
+    <button id="entrar">Entrar no Lobby</button>
+  </div>
+
+  <div id="lista"></div>
+  <div id="status"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    document.getElementById('entrar').addEventListener('click', () => {
+      const nome = document.getElementById('nome').value || undefined;
+      const totalPlayers = document.getElementById('totalPlayers').value;
+      const totalPecas = document.getElementById('totalPecas').value;
+      socket.emit('lobby:entrar', { nome, totalPlayers, totalPecas });
+      document.getElementById('entrar').disabled = true;
+    });
+
+    socket.on('lobby:atualizado', (sala) => {
+      const lista = document.getElementById('lista');
+      lista.innerHTML = '<h3>Sala ' + sala.id + ' (' + sala.jogadores.length + '/' + sala.totalPlayers + ')</h3>' +
+        sala.jogadores.map(j => '<div class="jogador">Jogador ' + (j.indice + 1) + ': ' + j.nome + '</div>').join('');
+    });
+
+    socket.on('jogo:iniciar', (sala) => {
+      document.getElementById('status').textContent = 'Sala completa! Jogo a começar: ' + sala.id;
+    });
+  </script>
+</body>
+</html>

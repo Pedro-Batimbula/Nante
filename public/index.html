@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nante</title>
+    <link rel="stylesheet" href="nante.css">
+    <link rel="stylesheet" href="respo.css">
+</head>
+<body >
+    <h1 class="title">Não te errites!</h1>
+    <div class="board-viewport" id="boardViewport">
+    <main class="main" id="main">
+        
+    <div class="peca" data-jogador="0" data-peca="0" id="P1-0"></div>
+    <div class="peca" data-jogador="0" data-peca="1" id="P1-1"></div>
+    <div class="peca" data-jogador="0" data-peca="2" id="P1-2"></div>
+    <div class="peca" data-jogador="0" data-peca="3" id="P1-3"></div>
+
+    <div class="peca" data-jogador="1" data-peca="0" id="P2-0"></div>
+    <div class="peca" data-jogador="1" data-peca="1" id="P2-1"></div>
+    <div class="peca" data-jogador="1" data-peca="2" id="P2-2"></div>
+    <div class="peca" data-jogador="1" data-peca="3" id="P2-3"></div>
+
+    <div class="peca" data-jogador="2" data-peca="0" id="P3-0"></div>
+    <div class="peca" data-jogador="2" data-peca="1" id="P3-1"></div>
+    <div class="peca" data-jogador="2" data-peca="2" id="P3-2"></div>
+    <div class="peca" data-jogador="2" data-peca="3" id="P3-3"></div>
+
+    <div class="peca" data-jogador="3" data-peca="0" id="P4-0"></div>
+    <div class="peca" data-jogador="3" data-peca="1" id="P4-1"></div>
+    <div class="peca" data-jogador="3" data-peca="2" id="P4-2"></div>
+    <div class="peca" data-jogador="3" data-peca="3" id="P4-3"></div>
+
+    <div class="ninho" data-jogador="0" id="ninho-0"></div>
+    <div class="ninho" data-jogador="1" id="ninho-1"></div>
+    <div class="ninho" data-jogador="2" id="ninho-2"></div>
+    <div class="ninho" data-jogador="3" id="ninho-3"></div>
+
+    <div class="ninho win" data-jogador="0" id="ninho-4-0"></div>
+    <div class="ninho win" data-jogador="1" id="ninho-4-1"></div>
+    <div class="ninho win" data-jogador="2" id="ninho-4-2"></div>
+    <div class="ninho win" data-jogador="3" id="ninho-4-3"></div>
+    <div class="nante_modal">
+
+        <div class="horizontal1">
+            <div class="row_horizontalE"> 
+                <div class="part1">
+                <div class="box">6
+                    <div id="HE6" class="check"></div>
+                </div> 
+                <div class="box">7
+                    <div id="HE7" class="check"></div>
+                </div> 
+                <div class="box">8
+                    <div id="HE8" class="check"></div>
+                </div> 
+                <div class="box">9
+                    <div id="HE9" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="HE10" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">11
+                    <div id="HE11" class="check"></div>
+                </div> 
+                <div class="box">12
+                    <div id="HE12" class="check"></div>
+                </div> 
+                <div class="box">13
+                    <div id="HE13" class="check"></div>
+                </div> 
+                <div class="box">14
+                    <div id="HE14" class="check"></div>
+                </div>
+               </div>
+                <div class="middle">
+                <div class="box">F
+                    <div id="MHEF" class="check" data-tipo="entrada"></div>
+                </div>
+                <div class="box">F1
+                    <div id="MHEF1" class="check" data-jogador="3"></div>
+                </div> 
+                <div class="box">F2
+                    <div id="MHEF2" class="check" data-jogador="3"></div>
+                </div> 
+                <div class="box">F3
+                    <div id="MHEF3" class="check" data-jogador="3"></div>
+                </div> 
+                <div class="box">F4
+                    <div id="MHEF4" class="check" data-jogador="3"></div>
+                </div> 
+                <div class="box">F5
+                    <div id="MHEF5" class="check" data-jogador="3"></div>
+                </div>
+                <div class="box">F6
+                    <div id="MHEF6" class="check" data-jogador="3"></div>
+                </div>
+                <div class="box">F7
+                    <div id="MHEF7" class="check" data-jogador="3"></div>
+                </div>
+                <div class="box">F8
+                    <div id="MHEF8" class="check" data-jogador="3"></div>
+                </div>
+               </div>
+                <div class="part2">
+                <div class="box">16
+                    <div id="HE16" class="check"></div>
+                </div> 
+                <div class="box">17
+                    <div id="HE17" class="check"></div>
+                 </div> 
+                <div class="box">18
+                    <div id="HE18" class="check"></div>
+                 </div> 
+                <div class="box">19
+                    <div id="HE19" class="check"></div>
+                 </div> 
+                <div class="box">F
+                    <div id="HEF" class="check" data-tipo="F"></div>
+                 </div>
+                <div class="box">1
+                    <div id="HE1" class="check"></div>
+                 </div> 
+                <div class="box">2
+                    <div id="HE2" class="check"></div>
+                 </div> 
+                <div class="box">3
+                    <div id="HE3" class="check"></div>
+                 </div> 
+                <div class="box">4
+                    <div id="HE4" class="check"></div>
+                 </div> 
+                </div>
+               
+            </div>
+        </div>
+        <div class="vertical">
+
+            <div class="row_verticalTOP"> 
+                <div class="partV1">
+                <div class="box">16
+                    <div id="VT16" class="check"></div>
+                </div> 
+                <div class="box">17
+                    <div id="VT17" class="check"></div>
+                </div> 
+                <div class="box">18
+                    <div id="VT18" class="check"></div>
+                </div> 
+                <div class="box">19
+                    <div id="VT19" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="VTF" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">1
+                    <div id="VT1" class="check"></div>
+                </div> 
+                <div class="box">2
+                    <div id="VT2" class="check"></div>
+                </div> 
+                <div class="box">3
+                    <div id="VT3" class="check"></div>
+                </div> 
+                <div class="box">4
+                    <div id="VT4" class="check"></div>
+                </div> 
+                </div>
+               <div class="middleV">
+                <div class="box">F
+                    <div id="MVF" class="check" data-tipo="entrada"></div>
+                </div>
+                <div class="box">F1
+                    <div id="MV1" class="check" data-jogador="2"></div>
+                </div> 
+                <div class="box">F2
+                    <div id="MV2" class="check" data-jogador="2"></div>
+                </div> 
+                <div class="box">F3
+                    <div id="MV3" class="check" data-jogador="2"></div>
+                </div> 
+                <div class="box">F4
+                    <div id="MV4" class="check" data-jogador="2"></div>
+                </div> 
+                <div class="box">F5
+                    <div id="MV5" class="check" data-jogador="2"></div>
+                </div>
+                <div class="box">F6
+                    <div id="MV6" class="check" data-jogador="2"></div>
+                </div>
+                <div class="box">F7
+                    <div id="MV7" class="check" data-jogador="2"></div>
+                </div>
+                <div class="box">F8
+                    <div id="MV8" class="check" data-jogador="2"></div>
+                </div>
+               </div>
+                <div class="partV2">
+                <div class="box">6
+                    <div id="VT6" class="check"></div>
+                </div> 
+                <div class="box">7
+                    <div id="VT7" class="check"></div>
+                </div> 
+                <div class="box">8
+                    <div id="VT8" class="check"></div>
+                </div> 
+                <div class="box">9
+                    <div id="VT9" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="VT10" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">11
+                    <div id="VT11" class="check"></div>
+                </div> 
+                <div class="box">12
+                    <div id="VT12" class="check"></div>
+                </div> 
+                <div class="box">13
+                    <div id="VT13" class="check"></div>
+                </div> 
+                <div class="box">14
+                    <div id="VT14" class="check"></div>
+                </div>
+               </div>
+              
+            </div>
+            <div class="box_win"> 
+                <div class="row_verticalTOPM">
+                <div class="box">5
+                    <div id="VTE5" class="check"></div>
+                </div> 
+                <div class="Middlebox">F9
+                    <div id="MVTF9" class="check" data-jogador="2"></div>
+                </div>
+                <div class="box">5
+                    <div id="VTD9" class="check"></div>
+                </div> 
+                </div>
+                <div class="Middle">
+                <div class="Middlebox">F9
+                    <div id="MEF9" class="check" data-jogador="3"></div>
+                </div>
+                <div class="Middlebox">F9
+                    <div id="MDF9" class="check" data-jogador="1"></div>
+                </div>
+                </div>
+                <div class="row_verticalBOTTM">
+                <div class="box">5
+                    <div id="VBE5" class="check"></div>
+                </div> 
+                <div class="Middlebox">F9
+                    <div id="MVBF9" class="check" data-jogador="0"></div>
+                </div>
+                <div class="box">5
+                    <div id="VBD5" class="check"></div>
+                </div> 
+
+                </div> 
+            </div>
+            <div class="row_verticalBOTT">  
+                <div class="partVB1">
+                <div class="box">6
+                    <div id="VB6" class="check"></div>
+                </div> 
+                <div class="box">7
+                    <div id="VB7" class="check"></div>
+                </div> 
+                <div class="box">8
+                    <div id="VB8" class="check"></div>
+                </div> 
+                <div class="box">9
+                    <div id="VB9" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="VBF10" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">11
+                    <div id="VB11" class="check"></div>
+                </div> 
+                <div class="box">12
+                    <div id="VB12" class="check"></div>
+                </div> 
+                <div class="box">13
+                    <div id="VB13" class="check"></div>
+                </div> 
+                <div class="box">14
+                    <div id="VB14" class="check"></div>
+                </div>
+               </div>
+ <div class="middleVB">
+                <div class="box">F
+                    <div id="MVBF" class="check" data-tipo="entrada"></div>
+                </div>
+                <div class="box">F1
+                    <div id="MVB1" class="check" data-jogador="0"></div>
+                </div> 
+                <div class="box">F2
+                    <div id="MVB2" class="check" data-jogador="0"></div>
+                </div> 
+                <div class="box">F3
+                    <div id="MVB3" class="check" data-jogador="0"></div>
+                </div> 
+                <div class="box">F4
+                    <div id="MVB4" class="check" data-jogador="0"></div>
+                </div> 
+                <div class="box">F5
+                    <div id="MVB5" class="check" data-jogador="0"></div>
+                </div>
+                <div class="box">F6
+                    <div id="MVB6" class="check" data-jogador="0"></div>
+                </div>
+                <div class="box">F7
+                    <div id="MVB7" class="check" data-jogador="0"></div>
+                </div>
+                <div class="box">F8
+                    <div id="MVB8" class="check" data-jogador="0"></div>
+                </div>
+
+               </div>
+                  <div class="partVB2">
+                <div class="box">16
+                    <div id="VB16" class="check"></div>
+                </div> 
+                <div class="box">17
+                    <div id="VB17" class="check"></div>
+                </div> 
+                <div class="box">18
+                    <div id="VB18" class="check"></div>
+                </div> 
+                <div class="box">19
+                    <div id="VB19" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="VBF" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">1
+                    <div id="VB1" class="check"></div>
+                </div> 
+                <div class="box">2
+                    <div id="VB2" class="check"></div>
+                </div> 
+                <div class="box">3
+                    <div id="VB3" class="check"></div>
+                </div> 
+                <div class="box">4
+                    <div id="VB4" class="check"></div>
+                </div> 
+                </div>
+            </div>
+        </div>
+        <div class="horizontal2">
+             <div class="row_horizontalD">  
+                <div class="part1">
+                <div class="box">16
+                    <div id="HD16" class="check"></div>
+                </div> 
+                <div class="box">17
+                    <div id="HD17" class="check"></div>
+                </div> 
+                <div class="box">18
+                    <div id="HD18" class="check"></div>
+                </div> 
+                <div class="box">19
+                    <div id="HD19" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="HDF" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">1
+                    <div id="HD1" class="check"></div>
+                </div> 
+                <div class="box">2
+                    <div id="HD2" class="check"></div>
+                </div> 
+                <div class="box">3
+                    <div id="HD3" class="check"></div>
+                </div> 
+                <div class="box">4
+                    <div id="HD4" class="check"></div>
+                </div> 
+                </div>
+              <div class="middle">
+                <div class="box">F
+                    <div id="MHDF" class="check" data-tipo="entrada"></div>
+                </div>
+                <div class="box">F1
+                    <div id="MHD1" class="check" data-jogador="1"></div>
+                </div> 
+                <div class="box">F2
+                    <div id="MHD2" class="check" data-jogador="1"></div>
+                </div> 
+                <div class="box">F3
+                    <div id="MHD3" class="check" data-jogador="1"></div>
+                </div> 
+                <div class="box">F4
+                    <div id="MHD4" class="check" data-jogador="1"></div>
+                </div> 
+                <div class="box">F5
+                    <div id="MHD5" class="check" data-jogador="1"></div>
+                </div>
+                <div class="box">F6
+                    <div id="MHD6" class="check" data-jogador="1"></div>
+                </div>
+                <div class="box">F7
+                    <div id="MHD7" class="check" data-jogador="1"></div>
+                </div>
+                <div class="box">F8
+                    <div id="MHD8" class="check" data-jogador="1"></div>
+                </div>
+               </div>
+                <div class="part2">
+                <div class="box">6
+                    <div id="HD6" class="check"></div>
+                </div> 
+                <div class="box">7
+                    <div id="HD7" class="check"></div>
+                </div> 
+                <div class="box">8
+                    <div id="HD8" class="check"></div>
+                </div> 
+                <div class="box">9
+                    <div id="HD9" class="check"></div>
+                </div> 
+                <div class="box">F
+                    <div id="HD10" class="check" data-tipo="F"></div>
+                </div>
+                <div class="box">11
+                    <div id="HD11" class="check"></div>
+                </div> 
+                <div class="box">12
+                    <div id="HD12" class="check"></div>
+                </div> 
+                <div class="box">13
+                    <div id="HD13" class="check"></div>
+                </div> 
+                <div class="box" >14
+                    <div id="HD14" class="check"></div>
+                </div>
+               </div>
+
+        </div>
+
+    </div>
+</main>
+    <div class="zoom-controls">
+        <button id="zoomInBtn" type="button">+</button>
+        <button id="zoomOutBtn" type="button">−</button>
+        <button id="zoomResetBtn" type="button">⟳</button>
+    </div>
+    </div>
+   <div class="play_box">
+        <button class="roolBtn" id="RollBtn">ROLL</button>
+        <div class="diceTable" id="DiceTable">
+        </div>
+    </div>
+    <h1 class="P1 removed">Player 1</h1>
+    <h1 class="P2 removed">Player 2</h1>
+    <h1 class="P3 removed">Player 3</h1>
+    <h1 class="P4 removed">Player 4</h1>
+
+    <div id="lobbyOverlay" class="lobby-overlay">
+        <div class="lobby-box">
+            <h1>Nante</h1>
+            <label for="lobbyNome">O teu nome:</label>
+            <input type="text" id="lobbyNome" placeholder="Jogador">
+            <label for="lobbyPlayers">Jogadores:</label>
+            <select id="lobbyPlayers">
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4" selected>4</option>
+            </select>
+            <label for="lobbyPecas">Peças por jogador:</label>
+            <select id="lobbyPecas">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4" selected>4</option>
+            </select>
+            <button id="lobbyEntrarBtn">Criar/Entrar automaticamente</button>
+            <p id="lobbyStatus"></p>
+            <hr>
+            <h2>Salas em espera</h2>
+            <ul id="listaSalas"></ul>
+        </div>
+    </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="index.js"></script>
+</body>
+</html>

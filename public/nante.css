@@ -1,0 +1,827 @@
+:root{
+    --main-background: linea;
+    --back-ground: rgb(22, 236, 19);
+    --play-ground:rgb(237, 237, 243);
+
+}
+body{
+    padding: 0;
+    display: flex;
+    background: linear-gradient(to top, rgb(219, 201, 201) 40%, #200202 100%);
+    justify-content: space-between;
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+html{
+    scroll-behavior: smooth;
+}
+.title{
+    position: fixed;
+    color: #fff;
+    left: 600px;
+    top: 0;
+    background: linear-gradient(to bottom, blue 30%, rgb(0, 0, 0) 100%);
+}
+main{
+    width: 80%;
+    height: 600px;
+    border-radius: 10px;
+    border: .0203rem solid #fff;
+    background: linear-gradient(to bottom, var(--back-ground) 30%, rgb(0, 0, 0) 100%);
+    position: relative;
+
+}
+.nante_modal{
+    display: flex;
+    align-items: center;
+    padding: 10px 80px;
+
+}
+.play_box{
+    height: 600px;
+    border: .0203rem solid #fff;
+    border-radius: 10px;
+    width: 30%;
+    background: black;
+
+}
+
+.row_verticalTOP{
+    background: rgb(251, 251, 253);
+    height: 220px;
+    width: 140px;
+}
+.box_win{
+    background: rgb(240, 240, 245);
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    width: 140px;
+    left: 20px;
+}
+.row_verticalBOTT{
+    background: rgb(245, 245, 245);
+    height: 220px;
+    width: 140px;
+}
+.row_horizontalE{
+    background: rgb(241, 240, 239);
+    height: 140px;
+    width: 280px; 
+}
+.row_horizontalD{
+    background: rgb(241, 2, 2);
+    height: 140px;
+    width: 280px; 
+}
+.P1, .P2, .P3, .P4{
+    position: fixed;
+    z-index: 1000;
+}
+.P1, .P2.show, .P3.show, .P4.show{
+    background:linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    border: .134rem solid rgb(241, 245, 243);
+    border-radius: 40px;
+    color: #fff;
+    width: 140px;
+    padding: 0 0 0 20px;
+    transition: 1.2s;
+    scale: 1;
+}
+.P1{
+    right: 420px;
+    bottom: 40px;
+}
+.P2.show{
+    right: 470px;
+    bottom: 430px;
+}
+.P3.show{
+    right: 950px;
+    bottom: 430px;
+}
+.P4.show{
+    right: 950px;
+    bottom: 40px;
+}
+.P1.removed, .P2.removed, .P3.removed, .P4.removed{
+    transition: 1.2s;
+    scale: 0;
+}
+
+
+
+/*==========PLAY DICES============*/
+.roolBtn{
+    background:linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    position: fixed;
+    bottom: 5px;
+    right: 120px;
+    color: #fff;
+    width: 100px;
+    font-weight: bold;
+    height: 100px;
+    border-radius: 50%;
+    border: 1px double #0000;
+    font-size: large;
+    cursor: pointer;
+}
+.roolBtn:hover{
+    font-size: 30px;
+    background:linear-gradient(to bottom, rgb(101, 113, 248) 30%, rgb(0, 0, 0) 100%);
+
+}
+.GameSet{
+    color: #fff;
+    border: .5px solid #fff;
+    display: block;
+    margin: 4px;
+    background: linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    border-radius:30px 30px 0 0 ; 
+    align-content: center;
+    border: .5px solid #fff;
+}
+.GameSet.scale-down{
+    opacity: 0.2;
+}
+.GameSet label{
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+.GameSet h1{
+    margin-left: 80px;
+}
+.GameSet input{
+    background: rgb(18, 82, 87);
+    border: .2px solid white;
+    width: 30px;
+    color: #fff;
+    border-radius: 10px;
+    margin-left: 270px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.playBtn{
+    margin-left: 10px;
+    font-weight: bold;
+    font-size: 20px;
+    color: #fff;
+    width: 300px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    background:linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+}
+.playBtn:hover{
+    font-size: 30px;
+    background:linear-gradient(to bottom, rgb(101, 113, 248) 30%, rgb(0, 0, 0) 100%);
+
+}
+.diceTable{
+    margin-left: 13px;
+    width: 300px;
+    border: .5px solid #fff;
+    display: flex;
+    height: 308px;
+    align-items: center;
+    align-content: center;
+    background:linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+
+}
+
+/*===========Dices=======*/
+.dice{
+    width: 60px;
+    height: 70px;
+    margin: 10px;
+    border-radius: 10px;
+    background-color: #fff;
+    display: flex; 
+    justify-content:space-between;
+    align-items: center;
+
+}
+.dice3, .dice4, .dice5, .dice6{
+    width: 60px;
+    height: 70px;
+    margin: 10px;
+    border-radius: 10px;
+    background-color: #fff;
+    justify-content:space-between;
+    align-items: center;
+
+}
+.dice .S1{
+    width: 20px;
+    height: 20px;
+    margin: 80px 7px;
+    border-radius: 50%;
+    margin-left: 18px;
+    background-color: #fc0404;
+}
+.lin1, .lin2, .lin3{
+    width: 100%;
+    height: 15px;
+    margin-top: 6px;
+    display: flex;
+}
+.dice .K1{
+    width: 14px;
+    height: 10px;
+    margin: 10px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice3 .lin1 .L1{
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice3 .lin2 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 20px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice3 .lin3 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 34px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice4 .lin1 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background-color: #f31010;
+}
+.dice4 .lin3 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background-color: #f31010;
+}
+.dice5 .lin1 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice5 .lin2 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 19px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice5 .lin3 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice6 .lin1 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 3px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice6 .lin2 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 3px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+.dice6 .lin3 .L1{
+    width: 14px;
+    height: 14px;
+    margin-left: 3px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+
+
+
+/*==================Nante===============*/
+
+.row_horizontalE{
+    display: flex;
+    background: #fc0404;
+    flex-direction: column;
+}
+.row_verticalTOP{
+    display: flex;
+    background: #fc0404;
+}
+.row_verticalBOTT{
+    display: flex;
+    background: #fc0404;
+}   
+.box_win{
+    display: flex;
+    background-color: green;
+}
+.box_win .Middle{
+    display: flex;
+    gap: 80px;
+}
+.box_win .row_horizontalE{
+    color: #fff;
+    gap: 1px;
+}
+
+.box_win .row_horizontalE .P1box{
+    background-color: #000000;
+    color: #fff;
+    margin: 0.5px;
+    height: 29.5px;
+    width: 29.3px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.part1 {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 1px;
+}
+.part2 {
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+}
+.middle {
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+    height: 80px;
+}
+
+.partV2 {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1px;
+}
+.partVB2 {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1px;
+}
+.middleV {
+    flex-direction: row;
+    gap: 1px;
+    height: 80px;
+}
+.middleVB {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1px;
+    justify-content: space-evenly;
+
+}
+.part1 .box{
+    background-color: #000000;
+    color: #fff;
+    display: flex;
+    height: 30px;
+    width: 30px;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+
+}
+.partV1 .box{
+    background-color: #000000;
+    color: #fff;
+    height: 24px;
+    width: 30px;
+    margin-bottom: .5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.partVB1 .box{
+    background-color: #000002;
+    color: #fff;
+    height: 23.8px;
+    width: 30px;
+    margin-bottom: .8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.part2 .box{
+    background-color: #000002;
+    color: #fff;
+    height: 30px;
+    width: 30px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.box_win .row_horizontalE .P2box{
+    background-color: #000002;
+    color: #fff;
+    margin: 0.5px;
+    height: 29.5px;
+    width: 29.3px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.box_win .row_verticalTOPM .box{
+    background-color: #000002;
+    color: #fff;
+    margin: 0.5px;
+    height: 29.5px;
+    width: 29.3px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.box_win .row_verticalBOTTM .box{
+    background-color: #000002;
+    color: #fff;
+    height: 29px;
+    width: 29.3px;
+    cursor: pointer;
+    margin-bottom: .5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.partV2 .box{
+    background-color: #010007;
+    color: #fff;
+    height: 24px;
+    width: 30px;
+    margin-bottom: .5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.partVB2 .box{
+    background-color: #000002;
+    color: #fff;
+    height: 24px;
+    width: 30px;
+    margin-bottom: .5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.middle .box{
+    background-color: #f4f1f1;
+    color: #170101;
+    width: 30px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.box_win .Middle .Middlebox{
+    background-color: #f4f1f1;
+    color: #170101;
+    width: 30px;
+    height: 80px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.box_win .row_verticalTOPM{
+    display: flex;
+}
+.box_win .row_verticalTOPM .Middlebox{
+    background-color: #f4f1f1;
+    color: #170101;
+    width: 80px;
+    height: 29px;
+    cursor: pointer;
+    margin-top: .9px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.box_win .row_verticalBOTTM{
+    display: flex;
+}
+.box_win .row_verticalBOTTM .Middlebox{
+    background-color: #f4f1f1;
+    color: #170101;
+    width: 80px;
+    height: 29px;
+    cursor: pointer;
+    margin-bottom: .1px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.middleV .box{
+    background-color: #f4f1f1;
+    color: #170101;
+    height: 24px;
+    width: 80px;
+    margin-bottom: .5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.middleVB .box{
+    background-color: #f4f1f1;
+    color: #170101;
+    height: 23.8px;
+    width: 80px;
+    margin-bottom: .8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.row_horizontalD .middle{
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 1px;
+    height: 80px;
+}
+.row_horizontalD .part1{
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 1px;
+}
+.nante_modal input{
+    scale: 1;
+}
+
+/* ========= PEÇAS / BOLINHAS ========= */
+
+
+/* Cores por jogador */
+[data-jogador="0"].peca { 
+    background: #3498db;
+    transition: 1s; 
+    left: 35%;
+    top: 53%;
+
+ } 
+[data-jogador="0"].peca.on{
+    background: #3498db; 
+    left: 43%;
+    top: 80%;
+}
+
+[data-jogador="1"].peca{
+    background: #f1c40f;
+    transition: 1s;
+    left: 37%;
+    top: 49%;
+}
+[data-jogador="1"].peca.off{
+    scale: 0;
+}
+[data-jogador="3"].peca.off{
+    scale: 0;
+}
+[data-jogador="1"].peca.on {
+    background: #f1c40f;
+    left: 49%;
+    top: 32%;
+}
+[data-jogador="2"].peca{ 
+    background: #8420be; 
+    transition: 1s;
+    top: 45%;
+} 
+[data-jogador="2"].peca.on{ 
+    background: #8420be; 
+    left: 25%;
+    top: 23%;
+} 
+
+
+[data-jogador="3"].peca{ 
+     background: #e74c3c;
+    transition: 1s;
+     left: 33%;
+     top: 49%;
+ } 
+ [data-jogador="3"].peca.on { 
+     background: #e74c3c;
+     left: 17%;
+     top: 68%;
+ } 
+ [data-jogador="0"].peca.oN,  [data-jogador="1"].peca.oN,  [data-jogador="2"].peca.oN,  [data-jogador="3"].peca.oN{
+    transition: 0s;
+ }
+
+/* Peças do jogador 1 */
+[data-jogador="0"][data-peca="1"].peca.K, [data-jogador="0"][data-peca="2"].peca.K, [data-jogador="0"][data-peca="3"].peca.K{
+    scale: 0;
+}
+[data-jogador="0"][data-peca="2"].peca.L, [data-jogador="0"][data-peca="3"].peca.L{
+    scale: 0;
+}
+ [data-jogador="0"][data-peca="3"].peca.M{
+    scale: 0;
+}
+/* Peças do Jogador 2 */
+[data-jogador="1"][data-peca="1"].peca.K, [data-jogador="1"][data-peca="2"].peca.K, [data-jogador="1"][data-peca="3"].peca.K{
+    scale: 0;
+}
+[data-jogador="1"][data-peca="2"].peca.L, [data-jogador="1"][data-peca="3"].peca.L{
+    scale: 0;
+}
+ [data-jogador="1"][data-peca="3"].peca.M{
+    scale: 0;
+}
+/* Peças do jogador 3 */
+[data-jogador="2"][data-peca="1"].peca.K, [data-jogador="2"][data-peca="2"].peca.K, [data-jogador="2"][data-peca="3"].peca.K{
+    scale: 0;
+}
+[data-jogador="2"][data-peca="2"].peca.L, [data-jogador="2"][data-peca="3"].peca.L{
+    scale: 0;
+}
+[data-jogador="2"][data-peca="3"].peca.M{
+    scale: 0;
+}
+/* Peças do jogador 4 */
+[data-jogador="3"][data-peca="1"].peca.K, [data-jogador="3"][data-peca="2"].peca.K, [data-jogador="3"][data-peca="3"].peca.K{
+    scale: 0;
+}
+[data-jogador="3"][data-peca="2"].peca.L, [data-jogador="3"][data-peca="3"].peca.L{
+    scale: 0;
+}
+[data-jogador="3"][data-peca="3"].peca.M{
+    scale: 0;
+}
+/* ========= NINHOS (zonas de nascimento/retorno) ========= */
+.ninho {
+  position: absolute;
+  width: 25%;
+  height: 30%;
+  cursor: pointer;
+  /* border: 2px dashed rgba(255,255,255,0.4); descomenta pra ver a área enquanto ajustamos */
+}
+#ninho-2 { left: 3%;  top: 10%; }   /* roxo - topo esquerda */
+#ninho-1 { right: 33%; top: 9%;}   /* amarelo - topo direita */
+#ninho-0 { right: 33%; bottom: 2%; } /* azul - baixo direita */
+#ninho-3 { left: 4%;  bottom: 3%; } /* vermelho - baixo esquerda */
+.peca.pode-mover {
+  box-shadow: 0 0 0 3px gold;
+}
+#ninho-4 { 
+    left: 32.8%;  
+    bottom: 43%; 
+    width: 77px;
+    height: 72px;
+} /* vermelho - baixo esquerda */
+
+
+/* Zona de vitória: 4 quadrantes centrados no meio do tabuleiro */
+.ninho.win {
+    width: 30px;
+    height: 5%;
+}
+
+#ninho-4-3 {    
+    left: 32.6%;
+    bottom: 47%;
+    height: 30px;
+    width: 30px;
+
+}#ninho-4-2 {    
+      left: 35%;
+      bottom: 51%;
+}
+#ninho-4-0 {    
+      left: 35%;
+      bottom: 42%;
+}
+
+#ninho-4-1 {    
+    left: 37%;
+    bottom: 47%;
+    height: 30px;
+    width: 30px;
+
+}
+.ninho.win.destino-possivel {
+  box-shadow: inset 0 0 0 3px gold;
+  background-color: rgba(255, 215, 0, 0.35);
+}
+/* ========= CASAS ========= */
+.casa {
+  position: relative; /* pra peça se encaixar dentro centralizada */
+}
+
+.casa.highlight {
+  box-shadow: 0 0 0 3px yellow; /* mostra onde pode soltar */
+}
+
+.check.destino-possivel {
+  box-shadow: inset 0 0 0 3px #00e676;
+  background-color: rgba(0, 230, 118, 0.35);
+}
+
+.peca.inativa {
+  display: none;
+}
+
+.peca{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background: #2ecc71;
+    border: 3px solid white;
+    position: absolute;
+    top: 50%;
+    left: 35%;
+    cursor: pointer;
+    z-index: 9999;
+  }
+
+
+.peca:active {
+  transform: scale(1.2);
+}
+
+.peca.selecionada {
+  box-shadow: 0 0 0 3px rgb(0, 0, 0);
+  transform: scale(1.15);
+}
+
+.check{
+    height: 30px;
+    position: absolute;
+    margin-left: 2px;
+    width: 30px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.check:hover{
+    background: rgb(43, 46, 222);
+    opacity: 0.5;
+}
+.lobby-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+}
+.lobby-overlay.escondido {
+  display: none;
+}
+.lobby-box {
+  background: linear-gradient(to bottom, rgb(14,29,194) 30%, rgb(0,0,0) 100%);
+  border: 1px solid #fff;
+  border-radius: 12px;
+  padding: 24px 32px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 280px;
+}
+.lobby-box input, .lobby-box select {
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+}
+.lobby-box button {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  background: linear-gradient(to bottom, rgb(101,113,248) 30%, rgb(0,0,0) 100%);
+  color: #fff;
+}
+.lobby-box button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
