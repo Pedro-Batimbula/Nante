@@ -297,14 +297,36 @@
   /* DIAGNÓSTICO TEMPORÁRIO - remover depois de confirmar o alinhamento */
   .ninho[data-jogador="0"] { 
     outline: 2px solid white; }
-  .ninho[data-jogador="1"] { background: yellow !important; outline: 2px solid white; }
-  .ninho[data-jogador="2"] { background: blue !important; outline: 2px solid white; }
-  .ninho[data-jogador="3"] { background: orange !important; outline: 2px solid white; }
+  .ninho[data-jogador="1"] {outline: 2px solid white; }
+  .ninho[data-jogador="2"] { outline: 2px solid white; }
+  .ninho[data-jogador="3"] {  outline: 2px solid white; }
 }
 
 /* Fora do landscape de telemóvel, os botões de zoom não fazem sentido - escondidos */
 .zoom-controls {
   display: none;
+}
+@media (max-width: 1024px) and (orientation: landscape) {
+  /* ... Seus códigos anteriores que já estão aqui dentro ... */
+
+  /* 
+     JOGADORES 1 E 2: Encostar mais para a direita.
+     Aumentamos o 'left' ou reduzimos o 'right' dependendo de como foram criados.
+     Geralmente usa-se 'left'. Ajuste a porcentagem para mais se necessário.
+  */
+  .ninho[data-jogador="1"], 
+  .ninho[data-jogador="2"] {
+      left: 15% !important; /* Ajuste essa porcentagem para empurrar mais à direita */
+  }
+
+  /* 
+     JOGADORES 2 E 3: Mover mais para cima.
+     Reduzimos o 'top' ou aumentamos o 'bottom' para fazê-los subir na tela.
+  */
+  .ninho[data-jogador="2"], 
+  .ninho[data-jogador="3"] {
+      top: 5% !important; /* Diminuir o 'top' faz o elemento subir */
+  }
 }
 
 /* ===== Correção dos pontos dos dados =====
