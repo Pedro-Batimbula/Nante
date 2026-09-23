@@ -292,7 +292,9 @@
   }
 
   /* DIAGNÓSTICO TEMPORÁRIO - remover depois de confirmar o alinhamento */
-  .ninho[data-jogador="0"] { background: red !important; outline: 2px solid white; }
+  .ninho[data-jogador="0"] { 
+    background: red !important; 
+    outline: 2px solid white; }
   .ninho[data-jogador="1"] { background: yellow !important; outline: 2px solid white; }
   .ninho[data-jogador="2"] { background: blue !important; outline: 2px solid white; }
   .ninho[data-jogador="3"] { background: orange !important; outline: 2px solid white; }
