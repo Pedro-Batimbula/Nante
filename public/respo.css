@@ -316,7 +316,7 @@
   */
   .ninho[data-jogador="1"], 
   .ninho[data-jogador="2"] {
-      left: 15% !important; /* Ajuste essa porcentagem para empurrar mais à direita */
+      left: 20px !important; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
   /* 
@@ -325,7 +325,7 @@
   */
   .ninho[data-jogador="2"], 
   .ninho[data-jogador="3"] {
-      top: 5% !important; /* Diminuir o 'top' faz o elemento subir */
+      top: 10px !important; /* Diminuir o 'top' faz o elemento subir */
   }
 }
 
