@@ -7,32 +7,36 @@
         justify-content: center;
         padding: 5px;
     }
+    
+    /* Configuração geral dos ninhos internos */
     .ninho.win {
-    width: 20px;
-    height: 5%;
-    position: absolute;
-    left: 30px;
-    background: rgb(44, 31, 161);
-    z-index: 1000;
-    }
-    .ninho.win{
+        width: 20px;
+        height: 5%;
+        position: absolute;
+        z-index: 1000;
         transform: scale(0.5);
+        background: rgb(44, 31, 161);
     }
-    #ninho-4-2 {    
-      left: 34.3%;
-      bottom: 45%;
-    }
+
+    /* 
+       Ajuste individual dos ninhos da zona verde (Jogador 4)
+       Aumentamos o 'left' (para mover à direita) e o 'bottom' (para mover para cima)
+    */
     #ninho-4-0 {    
-      left: 34.3%;
-      bottom: 40%;
-    }
-    #ninho-4-3 {    
-      left: 32.8%;
-      bottom: 42%;
+      left: 38.5%;
+      bottom: 44%;
     }
     #ninho-4-1 {    
-      left: 34.7%;
-      bottom: 42%;
+      left: 38.9%;
+      bottom: 46%;
+    }
+    #ninho-4-2 {    
+      left: 38.5%;
+      bottom: 49%;
+    }
+    #ninho-4-3 {    
+      left: 37.0%;
+      bottom: 46%;
     }
 
     .title {
@@ -50,7 +54,6 @@
         height: 550px;
         overflow: hidden; /* mantém a cruz inteira */
     }
-
     .nante_modal {
         padding: 10px;
 
