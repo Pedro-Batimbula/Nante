@@ -301,14 +301,6 @@
   .ninho[data-jogador="2"] { outline: 2px solid white; }
   .ninho[data-jogador="3"] {  outline: 2px solid white; }
 }
-
-/* Fora do landscape de telemóvel, os botões de zoom não fazem sentido - escondidos */
-.zoom-controls {
-  display: none;
-}
-@media (max-width: 1024px) and (orientation: landscape) {
-  /* ... Seus códigos anteriores que já estão aqui dentro ... */
-
   /* 
      JOGADORES 1 E 2: Encostar mais para a direita.
      Aumentamos o 'left' ou reduzimos o 'right' dependendo de como foram criados.
@@ -316,7 +308,7 @@
   */
   .ninho[data-jogador="1"], 
   .ninho[data-jogador="2"] {
-      left: 20px !important; /* Ajuste essa porcentagem para empurrar mais à direita */
+      left: 20px ; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
   /* 
@@ -325,9 +317,15 @@
   */
   .ninho[data-jogador="2"], 
   .ninho[data-jogador="3"] {
-      top: 10px !important; /* Diminuir o 'top' faz o elemento subir */
+      top: 10px; /* Diminuir o 'top' faz o elemento subir */
   }
+
+
+/* Fora do landscape de telemóvel, os botões de zoom não fazem sentido - escondidos */
+.zoom-controls {
+  display: none;
 }
+
 
 /* ===== Correção dos pontos dos dados =====
    As margens do nante.css foram pensadas para o dado grande (60x70px) do ecrã de secretária.
