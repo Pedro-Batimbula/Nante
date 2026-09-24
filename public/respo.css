@@ -307,16 +307,16 @@
      Geralmente usa-se 'left'. Ajuste a porcentagem para mais se necessário.
   */
   .ninho[data-jogador="1"], 
-  .ninho[data-jogador="2"] {
-      left: 20px ; /* Ajuste essa porcentagem para empurrar mais à direita */
+  .ninho[data-jogador="0"] {
+      right: 20px ; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
   /* 
      JOGADORES 2 E 3: Mover mais para cima.
      Reduzimos o 'top' ou aumentamos o 'bottom' para fazê-los subir na tela.
   */
-  .ninho[data-jogador="2"], 
-  .ninho[data-jogador="3"] {
+  .ninho[data-jogador="1"], 
+  .ninho[data-jogador="2"] {
       top: 10px; /* Diminuir o 'top' faz o elemento subir */
   }
 
