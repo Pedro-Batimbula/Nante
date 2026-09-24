@@ -306,18 +306,17 @@
      Aumentamos o 'left' ou reduzimos o 'right' dependendo de como foram criados.
      Geralmente usa-se 'left'. Ajuste a porcentagem para mais se necessário.
   */
-  .ninho[data-jogador="1"], 
-  .ninho[data-jogador="0"] {
-      position: absolute;
+ #ninho-4-1,
+ #ninho-4-0{
       right: 20px ; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
   /* 
-     JOGADORES 2 E 3: Mover mais para cima.
+     JOGADORES 1 E 2: Mover mais para cima.
      Reduzimos o 'top' ou aumentamos o 'bottom' para fazê-los subir na tela.
   */
-  .ninho[data-jogador="1"], 
-  .ninho[data-jogador="2"] {
+   #ninho-4-1 , 
+  #ninho-4-2 {
       top: 0; /* Diminuir o 'top' faz o elemento subir */
   }
 
