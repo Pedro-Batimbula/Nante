@@ -308,6 +308,7 @@
   */
   .ninho[data-jogador="1"], 
   .ninho[data-jogador="0"] {
+      position: absolute;
       right: 20px ; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
