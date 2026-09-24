@@ -50,7 +50,7 @@
     }
 
     main {
-        width: 65%;
+        width: 90%;
         height: 550px;
         overflow: hidden; /* mantém a cruz inteira */
     }
