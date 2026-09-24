@@ -294,27 +294,12 @@
     cursor: pointer;
   }
 
-  /* DIAGNÓSTICO TEMPORÁRIO - remover depois de confirmar o alinhamento */
-  .ninho[data-jogador="0"] { 
-    outline: 2px solid white; }
-  .ninho[data-jogador="1"] {outline: 2px solid white; }
-  .ninho[data-jogador="2"] { outline: 2px solid white; }
-  .ninho[data-jogador="3"] {  outline: 2px solid white; }
-}
-  /* 
-     JOGADORES 1 E 2: Encostar mais para a direita.
-     Aumentamos o 'left' ou reduzimos o 'right' dependendo de como foram criados.
-     Geralmente usa-se 'left'. Ajuste a porcentagem para mais se necessário.
-  */
+
  #ninho-1,
  #ninho-0{
-      right: 100px ; /* Ajuste essa porcentagem para empurrar mais à direita */
+      right: 190px ; /* Ajuste essa porcentagem para empurrar mais à direita */
   }
 
-  /* 
-     JOGADORES 1 E 2: Mover mais para cima.
-     Reduzimos o 'top' ou aumentamos o 'bottom' para fazê-los subir na tela.
-  */
    #ninho-1 , 
   #ninho-2 {
       top: 0; /* Diminuir o 'top' faz o elemento subir */
