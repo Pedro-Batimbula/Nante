@@ -317,7 +317,7 @@
   */
   .ninho[data-jogador="1"], 
   .ninho[data-jogador="2"] {
-      top: 10px; /* Diminuir o 'top' faz o elemento subir */
+      top: 0; /* Diminuir o 'top' faz o elemento subir */
   }
 
 
