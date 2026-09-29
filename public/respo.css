@@ -1,5 +1,10 @@
 /*================ RESPONSIVO NANTE - SEM QUEBRAR ESTRUTURA ==================*/
 
+/* Botões de zoom: escondidos por defeito, só aparecem em landscape (media query mais abaixo) */
+.zoom-controls {
+  display: none;
+}
+
 /* TABLET: até 1024px */
 @media (max-width: 1024px) {
     body {
@@ -306,11 +311,7 @@
   }
 
 
-/* Fora do landscape de telemóvel, os botões de zoom não fazem sentido - escondidos */
-.zoom-controls {
-  display: none;
-}
-
+} /* fim do media query landscape */
 
 /* ===== Correção dos pontos dos dados =====
    As margens do nante.css foram pensadas para o dado grande (60x70px) do ecrã de secretária.
