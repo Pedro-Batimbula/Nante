@@ -114,8 +114,11 @@ socket.on('jogo:terminado', ({ classificacaoFinal }) => {
 function posicionarPecaEm(pecaEl, destinoEl, dx = 0, dy = 0) {
   const rect = destinoEl.getBoundingClientRect();
   const mainRect = main.getBoundingClientRect();
-  const centroX = rect.left - mainRect.left + rect.width / 2;
-  const centroY = rect.top - mainRect.top + rect.height / 2;
+  // fator de escala real do #main (zoom/pinça/transform de qualquer ecrã)
+  const escalaX = mainRect.width / main.offsetWidth || 1;
+  const escalaY = mainRect.height / main.offsetHeight || 1;
+  const centroX = (rect.left - mainRect.left) / escalaX - main.clientLeft + rect.width / escalaX / 2;
+  const centroY = (rect.top - mainRect.top) / escalaY - main.clientTop + rect.height / escalaY / 2;
   pecaEl.style.left = (centroX + dx - pecaEl.offsetWidth / 2) + 'px';
   pecaEl.style.top = (centroY + dy - pecaEl.offsetHeight / 2) + 'px';
 }
@@ -399,3 +402,11 @@ RollBtn.addEventListener('click', () => {
 
   window.addEventListener('resize', aplicarTransformacao);
 })(); 
+// Recalcula as peças quando o tamanho/orientação muda
+let _resizeTimer;
+function reposicionarPecas() {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { if (estadoAtual) renderizarEstado(estadoAtual); }, 150);
+}
+window.addEventListener('resize', reposicionarPecas);
+window.addEventListener('orientationchange', reposicionarPecas);
