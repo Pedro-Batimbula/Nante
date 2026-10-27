@@ -22,6 +22,7 @@ let sujo = false;        // há alterações por gravar?
 let aSalvar = false;
 let timer = null;
 let proximoId = 1;
+let ativo = false;       // só fica true depois de carregar o histórico com sucesso (protege contra sobrescrever dados)
 
 // ===== GitHub =====
 async function gh(metodo, rota, corpo) {
@@ -75,6 +76,7 @@ async function carregar() {
   // jogos que ficaram "em curso" quando o servidor parou foram interrompidos
   dados.jogos.forEach(j => { if (j.estado === 'em curso') j.estado = 'interrompido'; });
   proximoId = dados.jogos.reduce((m, j) => Math.max(m, j.id), 0) + 1;
+  ativo = true;
 }
 
 function agendar(ms) {
@@ -131,12 +133,14 @@ async function salvarAgora() {
 
 // Chamar quando o servidor vai desligar (o Render envia SIGTERM em cada deploy)
 async function salvarAntesDeSair() {
+  if (!ativo) return;
   if (timer) { clearTimeout(timer); timer = null; }
   await salvarAgora();
 }
 
 // ===== Registo de jogos =====
 function registarInicio(sala) {
+  if (!ativo) return null;
   const id = proximoId++;
   dados.jogos.push({
     id,
@@ -153,15 +157,17 @@ function registarInicio(sala) {
 }
 
 // estadoJogo = sala.estadoDoJogo (tem .jogadores[indice].classificacao / .abandonou)
-function registarFim(id, estadoJogo) {
+// estadoFinal: 'terminado' (normal) ou 'abandonado' (todos saíram a meio)
+function registarFim(id, estadoJogo, estadoFinal) {
+  if (!ativo || id == null) return;
   const jogo = dados.jogos.find(j => j.id === id);
-  if (!jogo) return;
+  if (!jogo || jogo.estado !== 'em curso') return;   // já fechado: não regista duas vezes
   jogo.jogadores.forEach(j => {
     const p = estadoJogo.jogadores[j.indice];
     if (p) { j.classificacao = p.classificacao; j.abandonou = p.abandonou; }
   });
   jogo.fim = new Date().toISOString();
-  jogo.estado = 'terminado';
+  jogo.estado = estadoFinal || 'terminado';
   marcarSujo();
 }
 
