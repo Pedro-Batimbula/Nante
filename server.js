@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { criarEstadoInicial, jogadoresAtivosIndices, jogadorAtivoIndice, jogadorDaPeca, rolarDados, moverPeca, marcarAbandono } = require('./regras');
+const historico = require('./historico');   // HISTÓRICO
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -88,6 +89,10 @@ function removerJogadorDeTodasAsSalas(socketId) {
 
     const todosSairam = sala.jogadores.every(j => j.desconectado) || sala.jogadores.length === 0;
     if (todosSairam) {
+      // HISTÓRICO: se a sala acabou com o jogo a meio, fica registado como abandonado
+      if (sala.estadoDoJogo && !sala.estadoDoJogo.jogoTerminado) {
+        historico.registarFim(sala.jogoId, sala.estadoDoJogo, 'abandonado');
+      }
       delete salas[sala.id];
     }
     avisarTodosDaListaDeSalas();
@@ -97,6 +102,7 @@ function removerJogadorDeTodasAsSalas(socketId) {
 // Emite os resultados finais e coloca a sala em modo de decisão: cada jogador escolhe
 // "continuar" (recomeçar com os mesmos jogadores) ou "sair".
 function iniciarFaseDeDecisao(sala) {
+  historico.registarFim(sala.jogoId, sala.estadoDoJogo);   // HISTÓRICO
   sala.aguardandoDecisao = true;
   sala.decisoes = {};
 
@@ -136,6 +142,7 @@ function resolverDecisoesPosJogo(sala) {
   if (sala.jogadores.length === sala.totalPlayers) {
     sala.iniciado = true;
     sala.estadoDoJogo = criarEstadoInicial(sala.totalPlayers, sala.totalPecas);
+    sala.jogoId = historico.registarInicio(sala);   // HISTÓRICO
     io.to(sala.id).emit('jogo:iniciar', estadoPublicoDaSala(sala));
     io.to(sala.id).emit('estadoAtualizado', sala.estadoDoJogo);
   } else {
@@ -165,6 +172,7 @@ io.on('connection', (socket) => {
     if (sala.jogadores.length === sala.totalPlayers) {
       sala.iniciado = true;
       sala.estadoDoJogo = criarEstadoInicial(sala.totalPlayers, sala.totalPecas);
+      sala.jogoId = historico.registarInicio(sala);   // HISTÓRICO
 
       io.to(sala.id).emit('jogo:iniciar', estadoPublicoDaSala(sala));
       io.to(sala.id).emit('estadoAtualizado', sala.estadoDoJogo);
@@ -272,7 +280,22 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORTA = process.env.PORT || 3000;
-server.listen(PORTA, () => {
-  console.log('Servidor Nante a correr em http://localhost:' + PORTA);
+// HISTÓRICO: o Render envia SIGTERM em cada deploy/reinício; grava o que falta antes de sair
+['SIGTERM', 'SIGINT'].forEach(sinal => {
+  process.on(sinal, async () => {
+    await historico.salvarAntesDeSair();
+    process.exit(0);
+  });
 });
+
+const PORTA = process.env.PORT || 3000;
+
+// HISTÓRICO: carrega o histórico antes de aceitar jogadores. Se falhar, o jogo funciona
+// na mesma (só sem registar) e o motivo aparece nos logs.
+historico.carregar()
+  .catch(e => console.error('Histórico DESATIVADO:', e.message))
+  .then(() => {
+    server.listen(PORTA, () => {
+      console.log('Servidor Nante a correr em http://localhost:' + PORTA);
+    });
+  });
