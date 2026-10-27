@@ -151,7 +151,7 @@ configJogador.forEach((cfg, jogadorIndice) => {
 });
 
 function ehCasaSegura(casaId) { return CASAS_SEGURAS.includes(casaId); }
-function ehCasaMultipla(casaId) { return CASAS_MULTIPLAS.includes(casaId); }
+function ehCasaMultipla(casaId) { return CASAS_MULTIPLAS.includes(casaId) || casaId.startsWith('ninho-4-'); }
 function donoExclusivoDaCasa(casaId) { return CASA_EXCLUSIVA_DO_JOGADOR[casaId]; }
 
 // ===== Consultas sobre peças =====
@@ -293,7 +293,7 @@ function moverPecaComRegras(estado, pecaId, destinoId, indiceDestino) {
   estado.pecaIndiceNoPercurso[pecaId] = ehNinhoPartida ? -1 : indiceDestino;
 
   if (!ehNinhoPartida && capturasNesteMovimento >= 2) {
-    estado.bonusesCaptura.push(20, 40);
+    estado.bonusesCaptura.push(20, 20);
   } else if (!ehNinhoPartida && capturasNesteMovimento === 1) {
     estado.bonusesCaptura.push(20);
   }
@@ -423,6 +423,17 @@ function calcularDestinosPorPeca(estado) {
       if (!(casaId in mapaDestinos)) mapaDestinos[casaId] = { indiceDestino, indicesDados: { bonus: avanco } };
     });
 
+    // Captura dupla: os dois bónus de 20 também podem ser gastos de uma vez (40)
+    if (estado.bonusesCaptura.filter(b => b === 20).length >= 2) {
+      const indiceDestino = indiceAtual + 40;
+      if (indiceDestino < percurso.length) {
+        const casaId = percurso[indiceDestino];
+        if (!(casaId in mapaDestinos)) {
+          mapaDestinos[casaId] = { indiceDestino, indicesDados: { bonus: 40, consome: [20, 20] } };
+        }
+      }
+    }
+
     destinos[pecaId] = mapaDestinos;
   });
 
@@ -521,8 +532,12 @@ function moverPeca(estado, pecaId, destinoId) {
   if (!resultado.sucesso) return resultado;
 
   if (opcao.indicesDados && opcao.indicesDados.bonus !== undefined) {
-    const posicaoBonus = estado.bonusesCaptura.indexOf(opcao.indicesDados.bonus);
-    if (posicaoBonus !== -1) estado.bonusesCaptura.splice(posicaoBonus, 1);
+    // o bónus de 40 gasta os dois bónus de 20 de uma vez
+    const gastos = opcao.indicesDados.consome || [opcao.indicesDados.bonus];
+    gastos.forEach(valor => {
+      const posicaoBonus = estado.bonusesCaptura.indexOf(valor);
+      if (posicaoBonus !== -1) estado.bonusesCaptura.splice(posicaoBonus, 1);
+    });
   } else {
     [...opcao.indicesDados].sort((a, b) => b - a).forEach(i => estado.dadosDisponiveis.splice(i, 1));
   }
