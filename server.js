@@ -8,6 +8,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static('public'));
+require('./admin')(app);   // ADMIN
 
 // ===== Estado do lobby e das salas =====
 // Cada sala: { id, jogadores: [ {socketId, nome, indice} ], totalPlayers, totalPecas, iniciado }
