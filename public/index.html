@@ -949,12 +949,14 @@
       }
     }, 400);
   });
-document.addEventListener('keydown', function (e) {
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
-    e.preventDefault();
-    window.open('/admin', '_blank');
-  }
-});
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.key === '.') {
+      e.preventDefault();
+      window.open('/admin', '_blank');
+    }
+  });
+
   atualizarBotao();
 })();
 </script>
