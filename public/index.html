@@ -257,7 +257,7 @@
     font: 16px 'Trebuchet MS', Arial, sans-serif;   /* 16px evita zoom automático no telemóvel */
     border: 2px solid #b5b5b5; border-radius: 10px; background: #fff;
   }
-  #lobbyEntrarBtn{
+  #lobbyEntrarBtn, #contaEntrarBtn{
     width: 100%; padding: 12px; margin-top: 4px;
     border: 3px solid #fff; border-radius: 12px;
     background: linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
@@ -269,48 +269,575 @@
   #listaSalas{ list-style: none; margin: 0; padding: 0; }
   #listaSalas li{ padding: 10px; margin-bottom: 6px; border-radius: 10px; background: #eee; font-size: 14px; }
   #listaSalas li.sala-item{ cursor: pointer; background: #dfe8ff; }
-</style>
+  /* ===== Ecrã inicial ===== */
+  [hidden]{ display: none !important; }
+  #lobby{
+    display: block; padding: 0; color: #fff;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(22,236,19,.28) 0%, rgba(22,236,19,0) 60%),
+      linear-gradient(to bottom, #0a3d0a 0%, #000 100%);
+  }
+  .logo{
+    margin: 0; text-align: center; letter-spacing: 6px;
+    font: 900 54px 'Trebuchet MS', Arial, sans-serif; color: #fff;
+    text-shadow: 0 4px 0 #0e1dc2, 0 8px 18px rgba(0,0,0,.6);
+  }
+  .logo.pequeno{ font-size: 40px; margin: 18px 0 14px; }
+  .slogan{ margin: 6px 0 24px; text-align: center; font-size: 15px; color: rgba(255,255,255,.75); }
+
+  /* Primeira vez: nome */
+  .conta{ min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; }
+  .conta-caixa{
+    width: 100%; max-width: 360px; padding: 20px; border-radius: 20px;
+    background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.25);
+  }
+  .conta-caixa label{ display: block; margin-bottom: 8px; font-weight: bold; }
+  .conta-caixa input{
+    display: block; width: 100%; padding: 12px; margin-bottom: 14px;
+    font: 16px 'Trebuchet MS', Arial, sans-serif; color: #fff;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 12px;
+  }
+  .conta-caixa input::placeholder{ color: rgba(255,255,255,.5); }
+  #contaErro{ min-height: 20px; margin-top: 10px; font-size: 14px; text-align: center; color: #ff8a80; }
+
+  /* Página inicial */
+  .inicio{
+    width: 100%; max-width: 480px; margin: 0 auto; min-height: 100%;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 14px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  .topo{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .perfil{
+    display: flex; align-items: center; gap: 10px; min-width: 0;
+    padding: 6px 16px 6px 6px; border-radius: 999px;
+    background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.25);
+  }
+  .avatar{
+    width: 44px; height: 44px; flex: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 900 22px 'Trebuchet MS', Arial, sans-serif; color: #000;
+    background: linear-gradient(145deg, var(--amarelo), #e67e22); border: 3px solid #fff;
+  }
+  .perfil-txt{ display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .perfil-txt b{ max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .perfil-txt span{ font-size: 12px; color: rgba(255,255,255,.65); }
+  #sairContaBtn{
+    padding: 8px 14px; border: 2px solid rgba(255,255,255,.35); border-radius: 12px;
+    background: rgba(0,0,0,.45); color: #fff;
+    font: bold 13px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+
+  /* ===== Moedas, saldo e perfil ===== */
+  .moeda{ width: 1.25em; height: 1.25em; flex: none; vertical-align: -.3em; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+  .moeda.g{ width: 72px; height: 72px; }
+  .moeda-giro{ animation: moedaGiro 4s ease-in-out infinite; }
+  @keyframes moedaGiro{
+    0%, 70%, 100%{ transform: perspective(300px) rotateY(0deg); }
+    90%{ transform: perspective(300px) rotateY(360deg); }
+  }
+  .saldo{
+    display: flex; align-items: center; gap: 6px; padding: 8px 14px 8px 10px;
+    border-radius: 999px; border: 2px solid #ffd400; background: rgba(0,0,0,.55); color: #ffd400;
+    font: 900 16px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  .perfil{ cursor: pointer; }
+  .perfil-painel{ margin: 14px 0 18px; padding: 14px; border-radius: 16px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.25); }
+  .perfil-cartao{ display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 14px; }
+  .perfil-cartao > b{ font-size: 20px; }
+  .avatar.grande{ width: 72px; height: 72px; font-size: 34px; }
+  .carteira{
+    display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 18px 8px 12px;
+    border-radius: 16px; border: 2px solid rgba(255,212,0,.6);
+    background: linear-gradient(to bottom, rgba(255,212,0,.22), rgba(255,212,0,.06));
+  }
+  .carteira div{ display: flex; flex-direction: column; line-height: 1.1; }
+  .carteira b{ font: 900 28px 'Trebuchet MS', Arial, sans-serif; color: #ffd400; }
+  .carteira span{ font-size: 12px; color: rgba(255,255,255,.7); }
+  .stats{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stats div{
+    display: flex; flex-direction: column; align-items: center; padding: 10px 2px;
+    border-radius: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+  }
+  .stats b{ font-size: 20px; }
+  .stats span{ font-size: 10px; text-align: center; color: rgba(255,255,255,.65); }
+  .barra{ height: 8px; margin: 12px 0 14px; border-radius: 99px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .barra i{ display: block; height: 100%; width: 0; background: linear-gradient(to right, #2ecc71, #ffd400); transition: width .6s; }
+  #perfilPainel #sairContaBtn{ width: 100%; }
+
+  /* ===== Apostas ===== */
+  .privada-aposta{ margin-bottom: 10px; }
+  .privada-aposta label{ display: block; margin-bottom: 6px; font-size: 13px; color: rgba(255,255,255,.75); }
+  .aposta-campo{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .aposta-campo .moeda{ width: 30px; height: 30px; }
+  #privadaApostaValor{
+    flex: 1; min-width: 0; padding: 10px; text-align: center; color: #ffd400;
+    font: 900 20px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,212,0,.6); border-radius: 10px;
+  }
+  .aposta-atalhos{ display: flex; gap: 6px; margin-bottom: 8px; }
+  .aposta-atalhos button{ flex: 1; }
+
+  /* Zoom de entrada no jogo (a transição só existe durante a animação, para não atrasar o arrastar) */
+  #board.zoom-anima{ transition: transform 1.8s cubic-bezier(.45, 0, .2, 1); }
+
+  /* Saldo na arena (visível só durante o jogo) */
+  #saldoArena{
+    position: fixed;
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    z-index: 100; display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px;
+    border-radius: 999px; border: 2px solid #ffd400; background: rgba(0,0,0,.75); color: #ffd400;
+    font: 900 15px 'Trebuchet MS', Arial, sans-serif; pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,.4);
+  }
+  #saldoArena.pulsa{ animation: saldoPulsa .5s ease-out; }
+  @keyframes saldoPulsa{ 50%{ transform: scale(1.25); } }
+
+  /* Chat ao vivo (só aparece durante o jogo, junto com o saldo da arena) */
+  #saldoArena[hidden] ~ #chatBtn, #saldoArena[hidden] ~ #chatCaixa, #saldoArena[hidden] ~ #chatFlutua{ display: none; }
+  #chatBtn{
+    position: fixed; z-index: 110; width: 48px; height: 48px; border-radius: 50%;
+    right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    border: 3px solid #fff; background: rgba(0,0,0,.75); font-size: 22px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,.4); touch-action: manipulation;
+  }
+  #chatCaixa{
+    position: fixed; z-index: 120; display: flex; gap: 6px; align-items: flex-end;
+    right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, calc(100vw - 16px)); padding: 8px; border-radius: 14px;
+    background: rgba(0,0,0,.85); border: 2px solid rgba(255,255,255,.5);
+  }
+  #chatCaixa[hidden]{ display: none; }
+  #chatTexto{
+    flex: 1; min-width: 0; height: 44px; padding: 8px; resize: none; color: #fff;
+    font: 16px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  #chatEnviarBtn{
+    padding: 10px 12px; border: 2px solid #fff; border-radius: 10px; color: #fff; cursor: pointer;
+    background: linear-gradient(to bottom, #2ecc71, #1e8e4e); font: bold 14px 'Trebuchet MS', Arial, sans-serif;
+  }
+  #chatFlutua{
+    position: fixed; z-index: 105; pointer-events: none; display: flex; flex-direction: column; gap: 6px;
+    left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+    width: min(260px, 62vw);
+  }
+  .chat-msg{
+    align-self: flex-start; max-width: 100%; padding: 6px 12px; border-radius: 14px; color: #fff;
+    background: rgba(0,0,0,.65); font: 14px 'Trebuchet MS', Arial, sans-serif; word-break: break-word;
+    animation: chatSobe .35s ease-out;
+  }
+  .chat-msg b{ color: #ffd400; margin-right: 6px; }
+  .chat-msg.sai{ opacity: 0; transform: translateY(-24px); transition: opacity .8s, transform .8s; }
+  @keyframes chatSobe{ from{ opacity: 0; transform: translateY(24px); } to{ opacity: 1; transform: translateY(0); } }
+
+  /* Aviso de moedas (aparece por cima de tudo, também durante o jogo) */
+  #toastMoedas[hidden], #fimJogo[hidden]{ display: none; }
+  #toastMoedas{
+    position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 500;
+    transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 999px; pointer-events: none; color: #fff;
+    background: rgba(0,0,0,.88); border: 2px solid #ffd400; box-shadow: 0 6px 18px rgba(0,0,0,.6);
+    font: bold 14px 'Trebuchet MS', Arial, sans-serif; animation: toastEntra .35s ease-out;
+  }
+  #toastMoedas b{ font-size: 20px; color: #ffd400; }
+  #toastMoedas.perda{ border-color: #ff8a80; }
+  #toastMoedas.perda b{ color: #ff8a80; }
+  #toastMoedas .moeda{ animation: moedaRoda 1s ease-out; }
+  @keyframes toastEntra{
+    from{ opacity: 0; transform: translate(-50%, -20px) scale(.8); }
+    to{ opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  @keyframes moedaRoda{ to{ transform: perspective(300px) rotateY(720deg); } }
+
+  /* Fim de jogo */
+  #fimJogo{
+    position: fixed; inset: 0; z-index: 410; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(0,0,0,.78);
+  }
+  #fimLinhas{ white-space: pre-line; }
+  #fimPremios{ margin-bottom: 8px; }
+  .premio{
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0; padding: 6px 10px;
+    border-radius: 12px; font-size: 14px; background: rgba(255,212,0,.12); border: 1px solid rgba(255,212,0,.5);
+  }
+  .premio b{ font-size: 18px; color: #ffd400; }
+  #fimBotoes{ display: flex; gap: 10px; }
+  #fimBotoes button{
+    flex: 1; padding: 12px; border-radius: 12px; border: 2px solid #fff; color: #fff;
+    font: bold 15px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #fimSimBtn{ background: linear-gradient(to bottom, #2ecc71, #1e8e4e); }
+  #fimNaoBtn{ background: linear-gradient(to bottom, #e74c3c, #922b21); }
+
+  .pecas-linha{
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 14px; padding: 8px 12px; border-radius: 14px;
+    background: rgba(0,0,0,.4); font-size: 14px; font-weight: bold;
+  }
+  #pecasEscolha{ display: flex; gap: 6px; }
+  #pecasEscolha button{
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.4); background: transparent; color: #fff;
+    font: bold 16px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #pecasEscolha button.ativo{ background: #fff; color: #000; border-color: #fff; }
+
+  .modo{
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px;
+    border: 0; color: #fff; font-family: 'Trebuchet MS', Arial, sans-serif;
+    cursor: pointer; touch-action: manipulation;
+  }
+  .modo b{ font-weight: 900; line-height: 1; }
+  .modo:active:not(:disabled){ transform: translateY(4px); }
+  .modo:disabled{ cursor: default; }
+
+  .modos-grandes{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .modos-grandes .modo{ height: 190px; padding: 12px; border-radius: 20px; }
+  .modos-grandes .modo b{ font-size: 96px; text-shadow: 0 5px 0 rgba(0,0,0,.35); }
+  .modos-grandes .modo span{ font-size: 17px; font-weight: bold; }
+  .m2{ background: linear-gradient(to bottom, #f6b93b, #e58e0a); box-shadow: 0 7px 0 #a86300, 0 12px 18px rgba(0,0,0,.4); }
+  .m4{ background: linear-gradient(to bottom, #8e63e0, #5a3aa8); box-shadow: 0 7px 0 #38237a, 0 12px 18px rgba(0,0,0,.4); }
+
+  .modos-pequenos{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .modos-pequenos .modo{ height: 112px; padding: 10px 6px; border-radius: 16px; }
+  .modos-pequenos .modo b{ font-size: 38px; }
+  .modos-pequenos .modo span{ font-size: 13px; font-weight: bold; text-align: center; }
+  .modos-pequenos small{ display: block; font-weight: normal; font-size: 11px; opacity: .8; }
+  .m3{ background: linear-gradient(to bottom, #2ecc71, #1e8e4e); box-shadow: 0 5px 0 #11603a, 0 9px 14px rgba(0,0,0,.4); }
+  .modo.bloqueado{ background: rgba(255,255,255,.12); box-shadow: none; opacity: .6; }
+  .m2:disabled, .m3:disabled, .m4:disabled{ opacity: .6; }
+
+  #lobbyStatus{ color: #ffd400; }
+  .titulo-salas{ margin: 0 0 8px; font-size: 16px; }
+  #listaSalas li{ background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.85); }
+  #listaSalas li.sala-item{ background: rgba(14,29,194,.55); border-color: #fff; color: #fff; }
+
+  #contaModoBtn{
+    display: block; margin: 14px auto 0; padding: 4px 8px; border: 0; background: none;
+    color: rgba(255,255,255,.8); text-decoration: underline;
+    font: 14px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  .proteger{ margin-top: 12px; }
+  #protegerAbrirBtn{
+    width: 100%; padding: 10px; border: 2px dashed rgba(255,255,255,.4); border-radius: 12px;
+    background: rgba(0,0,0,.35); color: #fff;
+    font: bold 13px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #protegerForm{
+    margin-top: 8px; padding: 12px; border-radius: 14px; font-size: 13px;
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.2);
+  }
+  #protegerForm p{ margin: 0 0 10px; color: rgba(255,255,255,.8); }
+  #protegerForm input{
+    display: block; width: 100%; padding: 10px; margin-bottom: 10px;
+    font: 16px 'Trebuchet MS', Arial, sans-serif; color: #fff;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  #protegerGuardarBtn{
+    width: 100%; padding: 10px; border: 2px solid #fff; border-radius: 12px; color: #fff;
+    background: linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    font: bold 15px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #protegerMsg{ min-height: 18px; margin-top: 8px; text-align: center; color: #ffd400; }
+
+  /* ===== Mesas privadas ===== */
+  .m-priv{ background: linear-gradient(to bottom, #e84393, #a8226b); box-shadow: 0 5px 0 #6b1245, 0 9px 14px rgba(0,0,0,.4); }
+  .btn-mini{
+    padding: 8px 12px; border-radius: 10px; border: 2px solid rgba(255,255,255,.4);
+    background: rgba(255,255,255,.1); color: #fff;
+    font: bold 13px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+
+  .espera{
+    margin: 0 0 14px; padding: 14px; border-radius: 16px; text-align: center;
+    background: rgba(0,0,0,.5); border: 2px solid #ffd400;
+  }
+  .espera-titulo{ font-weight: bold; font-size: 15px; }
+  .espera-codigo{ margin: 8px 0 4px; font: 900 40px 'Trebuchet MS', Arial, sans-serif; letter-spacing: 8px; color: #ffd400; }
+  .espera-botoes{ display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+
+  .privada{ margin: 0 0 18px; padding: 14px; border-radius: 16px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.25); }
+  .privada-topo{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .privada-topo h2{ margin: 0; font-size: 16px; }
+  .privada-bloco{ margin-bottom: 16px; }
+  .privada-bloco > b{ display: block; margin-bottom: 8px; font-size: 14px; }
+  .privada-nota{ margin: 0 0 8px; font-size: 12px; color: rgba(255,255,255,.65); }
+  .privada-opcoes{ display: flex; gap: 8px; margin-bottom: 10px; }
+  .privada-opcoes button{
+    flex: 1; padding: 9px 4px; border-radius: 10px; border: 2px solid rgba(255,255,255,.4);
+    background: transparent; color: #fff; font: bold 14px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  .privada-opcoes button.ativo{ background: #fff; color: #000; border-color: #fff; }
+  .privada-opcoes button:disabled{ opacity: .45; cursor: default; }
+  #privadaCriarBtn, #privadaEntrarBtn{
+    padding: 10px 14px; border: 2px solid #fff; border-radius: 12px; color: #fff;
+    background: linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    font: bold 15px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #privadaCriarBtn{ width: 100%; }
+  .privada-linha{ display: flex; gap: 8px; }
+  #privadaCodigo{
+    flex: 1; min-width: 0; padding: 10px; text-align: center; text-transform: uppercase; letter-spacing: 4px;
+    font: 18px 'Trebuchet MS', Arial, sans-serif; color: #fff;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  #privadaMsg{ min-height: 18px; margin-bottom: 12px; text-align: center; font-size: 13px; color: #ffd400; }
+  #minhasMesas{ list-style: none; margin: 0; padding: 0; }
+  #minhasMesas li{
+    padding: 10px; margin-bottom: 8px; border-radius: 12px; font-size: 14px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+  }
+  .mesa-topo{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .mesa-codigo{ font: 900 20px 'Trebuchet MS', Arial, sans-serif; letter-spacing: 4px; color: #ffd400; }
+  .mesa-estado{ font-size: 12px; color: rgba(255,255,255,.75); }
+  .mesa-nomes{ margin: 4px 0 8px; font-size: 12px; color: rgba(255,255,255,.65); }
+  .mesa-botoes{ display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .espera-msg{ min-height: 18px; margin-top: 6px; font-size: 13px; color: #ffd400; }
+  .btn-destaque{ background: linear-gradient(to bottom, #2ecc71, #1e8e4e); border-color: #fff; }
+  .btn-destaque:disabled{ opacity: .45; cursor: default; }
+  #prestes{
+    position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(0,0,0,.75);
+  }
+  .prestes-caixa{
+    width: 100%; max-width: 340px; padding: 22px 18px; border-radius: 20px; text-align: center; color: #fff;
+    background: linear-gradient(to bottom, #0a3d0a, #000); border: 3px solid #ffd400;
+    box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  }
+  .prestes-caixa b{ font-size: 20px; }
+  .prestes-caixa p{ margin: 10px 0 16px; font-size: 14px; color: rgba(255,255,255,.85); }
+  #prestesBotoes{ display: flex; gap: 10px; }
+  #prestesBotoes button{
+    flex: 1; padding: 12px; border-radius: 12px; border: 2px solid #fff; color: #fff;
+    font: bold 16px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #prestesSimBtn{ background: linear-gradient(to bottom, #2ecc71, #1e8e4e); }
+  #prestesNaoBtn{ background: linear-gradient(to bottom, #e74c3c, #922b21); }
+  </style>
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mgAro" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3a6"/><stop offset=".45" stop-color="#d49a12"/>
+      <stop offset=".7" stop-color="#ffe27a"/><stop offset="1" stop-color="#a86f06"/>
+    </linearGradient>
+    <radialGradient id="mgFace" cx=".35" cy=".3" r=".85">
+      <stop offset="0" stop-color="#fff0a0"/><stop offset=".5" stop-color="#f7bd1f"/><stop offset="1" stop-color="#c8860a"/>
+    </radialGradient>
+    <linearGradient id="mgN" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffbe0"/><stop offset="1" stop-color="#e9a60f"/>
+    </linearGradient>
+    <symbol id="moeda" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="url(#mgAro)" stroke="#7a4e00" stroke-width="2"/>
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#9a6606" stroke-width="3" stroke-dasharray="2.6 2.6" opacity=".7"/>
+      <circle cx="50" cy="50" r="39" fill="url(#mgFace)" stroke="#8a5a00" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#fff3b0" stroke-width="1" opacity=".6"/>
+      <text x="51.5" y="65" text-anchor="middle" font-family="'Trebuchet MS',Arial,sans-serif" font-weight="900" font-size="46" fill="#8a5a00">N</text>
+      <text x="50" y="63.5" text-anchor="middle" font-family="'Trebuchet MS',Arial,sans-serif" font-weight="900" font-size="46" fill="url(#mgN)" stroke="#b97c08" stroke-width=".8">N</text>
+      <path d="M19.9 39.1A32 32 0 0 1 39.1 19.9" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+    </symbol>
+  </defs>
+</svg>
 <div id="viewport">
   <div id="board"></div>
 </div>
 
 <div id="vez"></div>
+<div id="saldoArena" hidden><svg class="moeda"><use href="#moeda"/></svg><b id="saldoArenaValor">0</b></div>
+<button type="button" id="chatBtn" aria-label="Chat">💬</button>
+<div id="chatCaixa" hidden>
+  <textarea id="chatTexto" maxlength="80" placeholder="Escreve uma mensagem..."></textarea>
+  <button type="button" id="chatEnviarBtn">Enviar</button>
+</div>
+<div id="chatFlutua"></div>
 
 <div id="dados">
   <div class="dado" id="dado1"></div>
   <div class="dado" id="dado2"></div>
 </div>
 <button id="btnGirar" type="button">GIRAR</button>
-
-<!-- Lobby: nome, nº de jogadores, nº de peças, lista de salas -->
+<!-- Ecrã inicial -->
 <div id="lobby">
-  <div class="lobby-caixa">
-    <h1>Nante</h1>
-    <label>O teu nome
-      <input id="lobbyNome" type="text" maxlength="20" placeholder="Jogador" autocomplete="off">
-    </label>
-    <label>Nº de jogadores
-      <select id="lobbyPlayers">
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4" selected>4</option>
-      </select>
-    </label>
-    <label>Peças por jogador
-      <select id="lobbyPecas">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4" selected>4</option>
-      </select>
-    </label>
-    <button id="lobbyEntrarBtn" type="button">Entrar</button>
+
+  <!-- 1) Primeira vez neste aparelho: escolher o nome -->
+  <section id="telaConta" class="conta">
+    <div class="logo">NANTE</div>
+    <p class="slogan">Rola os dados. Captura. Chega ao centro.</p>
+    <div class="conta-caixa">
+      <label for="contaNome">Como te chamas?</label>
+      <input id="contaNome" type="text" maxlength="20" placeholder="O teu nome" autocomplete="off">
+      <input id="contaSenha" type="password" placeholder="Palavra-passe" autocomplete="current-password" hidden>
+      <button id="contaEntrarBtn" type="button">Começar</button>
+      <div id="contaErro"></div>
+      <button id="contaModoBtn" type="button">Já tenho conta</button>
+    </div>
+  </section>
+
+  <!-- 2) Com sessão: página inicial -->
+  <section id="telaPainel" class="inicio" hidden>
+    <header class="topo">
+      <div class="perfil" id="perfilAbrir" role="button" tabindex="0">
+        <div class="avatar" id="avatar">?</div>
+        <div class="perfil-txt">
+          <b id="sessaoNome"></b>
+          <span>Jogador</span>
+        </div>
+      </div>
+      <button type="button" class="saldo" id="saldoPill" aria-label="As tuas moedas"><svg class="moeda"><use href="#moeda"/></svg><b id="saldoValor">100</b></button>
+    </header>
+
+    <div id="protegerCaixa" class="proteger" hidden>
+      <button id="protegerAbrirBtn" type="button">🔒 Proteger conta com palavra-passe</button>
+      <div id="protegerForm" hidden>
+        <p>Com palavra-passe podes entrar noutro aparelho. Escolhe com cuidado: por agora não dá para a alterar.</p>
+        <input id="protegerSenha" type="password" placeholder="Palavra-passe (mín. 6)" autocomplete="new-password">
+        <button id="protegerGuardarBtn" type="button">Guardar</button>
+        <div id="protegerMsg"></div>
+      </div>
+    </div>
+
+    <section id="perfilPainel" class="perfil-painel" hidden>
+      <div class="privada-topo">
+        <h2>O meu perfil</h2>
+        <button type="button" class="btn-mini" id="perfilFecharBtn">Fechar</button>
+      </div>
+      <div class="perfil-cartao">
+        <div class="avatar grande" id="perfilAvatar">?</div>
+        <b id="perfilNome"></b>
+        <div class="carteira">
+          <svg class="moeda g moeda-giro"><use href="#moeda"/></svg>
+          <div><b id="perfilMoedas">100</b><span>moedas</span></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div><b id="stJogos">0</b><span>Jogos</span></div>
+        <div><b id="stVitorias">0</b><span>Vitórias</span></div>
+        <div><b id="stDerrotas">0</b><span>Derrotas</span></div>
+        <div><b id="stPerc">0%</b><span>Taxa de vitória</span></div>
+      </div>
+      <div class="barra"><i id="stBarra"></i></div>
+      <button id="sairContaBtn" type="button" aria-label="Sair da conta">Sair da conta</button>
+    </section>
+
+    <div class="logo pequeno">NANTE</div>
+
+    <div id="esperaCaixa" class="espera" hidden>
+      <div class="espera-titulo" id="esperaTitulo"></div>
+      <div class="espera-msg" id="esperaMsg"></div>
+      <div class="espera-codigo" id="esperaCodigo" hidden></div>
+      <div class="espera-botoes">
+        <button type="button" class="btn-mini" id="esperaCopiarCodigoBtn" hidden>Copiar código</button>
+        <button type="button" class="btn-mini" id="esperaCopiarLinkBtn" hidden>Copiar link</button>
+        <button type="button" class="btn-mini btn-destaque" id="esperaComecarBtn" hidden>Começar jogo</button>
+        <button type="button" class="btn-mini" id="esperaSairBtn">Sair da sala</button>
+      </div>
+    </div>
+
+    <div class="pecas-linha">
+      <span>Peças por jogador</span>
+      <div id="pecasEscolha">
+        <button type="button" data-pecas="1">1</button>
+        <button type="button" data-pecas="2">2</button>
+        <button type="button" data-pecas="3">3</button>
+        <button type="button" data-pecas="4" class="ativo">4</button>
+      </div>
+    </div>
+
+    <div class="modos-grandes">
+      <button type="button" class="modo m2" data-jogadores="2"><b>2</b><span>2 Jogadores</span></button>
+      <button type="button" class="modo m4" data-jogadores="4"><b>4</b><span>4 Jogadores</span></button>
+    </div>
+
+    <div class="modos-pequenos">
+      <button type="button" class="modo m3" data-jogadores="3"><b>3</b><span>3 Jogadores</span></button>
+      <button type="button" id="abrirPrivadaBtn" class="modo m-priv"><b>🔒</b><span>Mesa privada</span></button>
+      <button type="button" class="modo bloqueado" disabled><b>👥</b><span>Amigos<small>em breve</small></span></button>
+    </div>
+
+    <section id="privadaPainel" class="privada" hidden>
+      <div class="privada-topo">
+        <h2>Mesa privada</h2>
+        <button type="button" class="btn-mini" id="privadaFecharBtn">Fechar</button>
+      </div>
+
+      <div class="privada-bloco">
+        <b>Criar mesa</b>
+        <p class="privada-nota">Usa as peças por jogador escolhidas acima.</p>
+        <div class="privada-opcoes" id="privadaTipo">
+          <button type="button" class="ativo" data-tipo="normal">Normal</button>
+          <button type="button" data-tipo="aposta">Aposta</button>
+        </div>
+        <div class="privada-aposta" id="privadaApostaLinha" hidden>
+          <label for="privadaApostaValor">Valor da entrada (todos pagam o mesmo)</label>
+          <div class="aposta-campo">
+            <svg class="moeda"><use href="#moeda"/></svg>
+            <input id="privadaApostaValor" type="number" inputmode="numeric" min="10" max="10000" value="50">
+          </div>
+          <div class="aposta-atalhos">
+            <button type="button" class="btn-mini" data-v="10">10</button>
+            <button type="button" class="btn-mini" data-v="50">50</button>
+            <button type="button" class="btn-mini" data-v="100">100</button>
+            <button type="button" class="btn-mini" data-v="500">500</button>
+          </div>
+          <p class="privada-nota">2 jogadores: o 1.º leva tudo. 3 ou 4: o 2.º recupera a entrada e o 1.º leva as dos restantes. Vitória: +200 extra.</p>
+        </div>
+        <div class="privada-opcoes" id="privadaN">
+          <button type="button" data-n="2">2 jogadores</button>
+          <button type="button" data-n="3">3</button>
+          <button type="button" data-n="4" class="ativo">4</button>
+        </div>
+        <button type="button" id="privadaCriarBtn">Criar mesa</button>
+      </div>
+
+      <div class="privada-bloco">
+        <b>Entrar com código</b>
+        <div class="privada-linha">
+          <input id="privadaCodigo" type="text" maxlength="5" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters">
+          <button type="button" id="privadaEntrarBtn">Entrar</button>
+        </div>
+      </div>
+
+      <div id="privadaMsg"></div>
+
+      <div class="privada-bloco">
+        <b>As minhas mesas</b>
+        <ul id="minhasMesas"><li>Ainda não criaste nenhuma mesa.</li></ul>
+      </div>
+    </section>
+
     <div id="lobbyStatus"></div>
-    <h2>Salas em espera</h2>
+
+    <h2 class="titulo-salas">Salas em espera</h2>
     <ul id="listaSalas"><li>Nenhuma sala em espera.</li></ul>
+  </section>
+
+</div>
+<!-- Aviso de moedas e fim de jogo -->
+<div id="toastMoedas" hidden></div>
+<div id="fimJogo" hidden>
+  <div class="prestes-caixa">
+    <b>Jogo terminado!</b>
+    <p id="fimLinhas"></p>
+    <div id="fimPremios"></div>
+    <p>Queres jogar de novo com os mesmos jogadores?</p>
+    <div id="fimBotoes">
+      <button type="button" id="fimSimBtn">Jogar de novo</button>
+      <button type="button" id="fimNaoBtn">Sair</button>
+    </div>
+  </div>
+</div>
+<!-- Notificação: o criador vai começar o jogo -->
+<div id="prestes" hidden>
+  <div class="prestes-caixa">
+    <b>Jogo prestes a começar</b>
+    <p id="prestesTxt"></p>
+    <div id="prestesBotoes">
+      <button type="button" id="prestesSimBtn">Participar</button>
+      <button type="button" id="prestesNaoBtn">Sair</button>
+    </div>
   </div>
 </div>
 
@@ -382,6 +909,8 @@
     el.className = 'check ' + cls;
     el.style.gridRow = (r + 1);
     el.style.gridColumn = (c + 1);
+    el.dataset.r = r;
+    el.dataset.c = c;
     el.textContent = txt;
     board.appendChild(el);
   });
@@ -409,6 +938,8 @@
     b.id = 'ninho-' + j;
     b.style.gridRow = (r + 1) + ' / span 9';
     b.style.gridColumn = (c + 1) + ' / span 9';
+    b.dataset.r = r;
+    b.dataset.c = c;
     b.innerHTML = '<div class="inner"><div class="ninho"></div><div class="ninho"></div><div class="ninho"></div><div class="ninho"></div></div>';
     board.appendChild(b);
 
@@ -459,6 +990,32 @@
       q.style.gridArea = area;
       q.style.background = CORES[j];
       centro.appendChild(q);
+    });
+  }
+
+  // Gira o tabuleiro (só visual): o meu jogador fica sempre em baixo à direita
+  function rodarPonto(r, c, k) {
+    for (let i = 0; i < k; i++) { const t = r; r = c; c = 20 - t; }
+    return [r, c];
+  }
+  function girarTabuleiro(k) {
+    board.querySelectorAll('.check').forEach(el => {
+      const [r, c] = rodarPonto(Number(el.dataset.r), Number(el.dataset.c), k);
+      el.style.gridRow = r + 1;
+      el.style.gridColumn = c + 1;
+    });
+    board.querySelectorAll('.base').forEach(b => {
+      const r0 = Number(b.dataset.r), c0 = Number(b.dataset.c);
+      const [r1, c1] = rodarPonto(r0, c0, k);
+      const [r2, c2] = rodarPonto(r0 + 8, c0 + 8, k);
+      b.style.gridRow = (Math.min(r1, r2) + 1) + ' / span 9';
+      b.style.gridColumn = (Math.min(c1, c2) + 1) + ' / span 9';
+    });
+    // as 4 casas finais no centro (2x2) também rodam
+    const areas = ['1 / 1', '1 / 2', '2 / 2', '2 / 1'];
+    [2, 1, 0, 3].forEach((j, i) => {
+      const q = document.getElementById('ninho-4-' + j);
+      if (q) q.style.gridArea = areas[(i + k) % 4];
     });
   }
 
@@ -662,6 +1219,24 @@
     aplicar();
   }
 
+  // Ao começar o jogo: parte do tabuleiro inteiro e aproxima-se da minha base, em movimento
+  function zoomDeEntrada() {
+    calcularMinimo();
+    escala = escalaMin;
+    aplicar();                                   // ponto de partida: tudo visível
+    const alvo = Math.min(MAX_ESCALA, escalaMin * 1.8);
+    const base = document.getElementById('ninho-' + meuIndice) || centro;
+    const bx = base.offsetLeft + base.offsetWidth / 2;
+    const by = base.offsetTop + base.offsetHeight / 2;
+    void board.offsetWidth;                      // fixa o ponto de partida antes de animar
+    board.classList.add('zoom-anima');
+    escala = alvo;
+    x = viewport.clientWidth / 2 - bx * alvo;    // põe a minha base no meio do ecrã
+    y = viewport.clientHeight / 2 - by * alvo;
+    aplicar();
+    setTimeout(() => board.classList.remove('zoom-anima'), 1900);
+  }
+
   // Arrastar (1 dedo) e beliscar (2 dedos)
   const pointers = new Map();
   let distAnterior = null;
@@ -813,30 +1388,533 @@
 
   /* ===== Lobby ===== */
   const lobby = document.getElementById('lobby');
-  const lobbyNome = document.getElementById('lobbyNome');
-  const lobbyPlayers = document.getElementById('lobbyPlayers');
-  const lobbyPecas = document.getElementById('lobbyPecas');
-  const lobbyEntrarBtn = document.getElementById('lobbyEntrarBtn');
+  /* ===== Sessão: o nome fica guardado neste aparelho ===== */
+  const CHAVE_SESSAO = 'nante_sessao';
+  const telaConta = document.getElementById('telaConta');
+  const telaPainel = document.getElementById('telaPainel');
+  const contaNome = document.getElementById('contaNome');
+  const contaErro = document.getElementById('contaErro');
+  let sessao = null;
+
+  function lerSessao() {
+    try {
+      const s = JSON.parse(localStorage.getItem(CHAVE_SESSAO));
+      return s && s.nome && s.id && s.token ? s : null;
+    } catch (e) { return null; }
+  }
+  function mostrarEcra() {
+    telaConta.hidden = !!sessao;
+    telaPainel.hidden = !sessao;
+    if (sessao) {
+      document.getElementById('sessaoNome').textContent = sessao.nome;
+      document.getElementById('avatar').textContent = sessao.nome.charAt(0).toUpperCase();
+      document.getElementById('protegerCaixa').hidden = !!sessao.temSenha;
+    }
+  }
+  // "Já tenho conta": entra com nome + palavra-passe (por exemplo, noutro aparelho)
+  const contaSenha = document.getElementById('contaSenha');
+  const contaModoBtn = document.getElementById('contaModoBtn');
+  let modoEntrar = false;
+  contaModoBtn.addEventListener('click', () => {
+    modoEntrar = !modoEntrar;
+    contaSenha.hidden = !modoEntrar;
+    contaSenha.value = '';
+    contaErro.textContent = '';
+    document.getElementById('contaEntrarBtn').textContent = modoEntrar ? 'Entrar' : 'Começar';
+    contaModoBtn.textContent = modoEntrar ? 'Criar conta nova' : 'Já tenho conta';
+  });
+  contaSenha.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('contaEntrarBtn').click();
+  });
+
+  document.getElementById('contaEntrarBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('contaEntrarBtn');
+    const n = contaNome.value.trim();
+    if (n.length < 2) { contaErro.textContent = 'Escreve um nome com pelo menos 2 letras.'; return; }
+    if (modoEntrar && !contaSenha.value) { contaErro.textContent = 'Escreve a palavra-passe.'; return; }
+    btn.disabled = true;
+    contaErro.textContent = modoEntrar ? 'A entrar...' : 'A criar a conta...';
+    try {
+      const r = await fetch(modoEntrar ? '/conta/entrar' : '/conta/criar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modoEntrar ? { nome: n, senha: contaSenha.value } : { nome: n })
+      });
+      const d = await r.json();
+      if (!r.ok || d.erro) { contaErro.textContent = d.erro || 'Não foi possível criar a conta.'; return; }
+      sessao = { id: d.id, nome: d.nome, token: d.token, temSenha: modoEntrar };
+      contaSenha.value = '';
+      try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao)); } catch (e) {}
+      contaErro.textContent = '';
+      mostrarEcra();
+      aposSessao();
+    } catch (e) {
+      contaErro.textContent = 'Sem ligação ao servidor. Tenta de novo.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  contaNome.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('contaEntrarBtn').click();
+  });
+  document.getElementById('sairContaBtn').addEventListener('click', () => {
+    if (naSala) return;
+    if (!window.confirm('Sair da conta neste aparelho?')) return;
+    try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {}
+    sessao = null;
+    mostrarEcra();
+  });
+  // Proteger conta (palavra-passe opcional)
+  document.getElementById('protegerAbrirBtn').addEventListener('click', () => {
+    const f = document.getElementById('protegerForm');
+    f.hidden = !f.hidden;
+  });
+  document.getElementById('protegerGuardarBtn').addEventListener('click', async () => {
+    const msg = document.getElementById('protegerMsg');
+    const campo = document.getElementById('protegerSenha');
+    if (!sessao) return;
+    if (campo.value.length < 6) { msg.textContent = 'Mínimo 6 caracteres.'; return; }
+    msg.textContent = 'A guardar...';
+    try {
+      const r = await fetch('/conta/senha', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sessao.id, token: sessao.token, senha: campo.value })
+      });
+      const d = await r.json();
+      if (!r.ok || d.erro) { msg.textContent = d.erro || 'Não foi possível guardar.'; return; }
+      campo.value = '';
+      msg.textContent = '';
+      sessao.temSenha = true;
+      try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao)); } catch (e) {}
+      mostrarEcra();
+    } catch (e) { msg.textContent = 'Sem ligação ao servidor.'; }
+  });
+
+  sessao = lerSessao();
+  mostrarEcra();
+  // se a sessão guardada já não existir no servidor, volta ao ecrã do nome
+  if (sessao) {
+    fetch('/conta/validar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sessao.id, token: sessao.token })
+    }).then(async r => {
+      if (r.status === 401) { try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {} sessao = null; mostrarEcra(); return; }
+      const d = await r.json();
+      sessao.temSenha = !!d.temSenha;
+      try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao)); } catch (e) {}
+      mostrarEcra();
+    }).catch(() => {});
+  }
+  let pecasEscolhidas = 4;
+  const botoesModo = () => document.querySelectorAll('.modo[data-jogadores]');
   const lobbyStatus = document.getElementById('lobbyStatus');
   const listaSalas = document.getElementById('listaSalas');
 
   function marcarNaSala() {
     naSala = true;
-    lobbyEntrarBtn.disabled = true;
+    botoesModo().forEach(b => { b.disabled = true; });
     lobbyStatus.textContent = 'À espera de mais jogadores...';
   }
 
-  lobbyEntrarBtn.addEventListener('click', () => {
-    if (naSala) return;
-    socket.emit('lobby:entrar', {
-      nome: lobbyNome.value.trim() || undefined,
-      totalPlayers: Number(lobbyPlayers.value),
-      totalPecas: Number(lobbyPecas.value)
-    });
-    marcarNaSala();
+  // Peças por jogador (1 a 4)
+  document.getElementById('pecasEscolha').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-pecas]');
+    if (!b || naSala) return;
+    pecasEscolhidas = Number(b.dataset.pecas);
+    document.querySelectorAll('#pecasEscolha button').forEach(x => x.classList.toggle('ativo', x === b));
   });
 
-  socket.on('connect', () => socket.emit('lobby:listarSalas'));
+  // Cartões 2 / 3 / 4 jogadores: criam ou juntam-se a uma sala compatível
+  botoesModo().forEach(b => b.addEventListener('click', () => {
+    if (naSala) return;
+    socket.emit('lobby:entrar', {
+      id: sessao.id,
+      token: sessao.token,
+      totalPlayers: Number(b.dataset.jogadores),
+      totalPecas: pecasEscolhidas
+    });
+    marcarNaSala();
+  }));
+
+  /* ===== Mesas privadas ===== */
+  const privadaPainel = document.getElementById('privadaPainel');
+  const privadaMsg = document.getElementById('privadaMsg');
+  const minhasMesas = document.getElementById('minhasMesas');
+  const esperaCaixa = document.getElementById('esperaCaixa');
+  let privadaN = 4;
+  let minhas = [];
+  let codigoEspera = null;
+
+  const credenciais = () => ({ id: sessao.id, token: sessao.token });
+  const linkDaMesa = cod => location.origin + '/?sala=' + cod;
+
+  function copiar(texto, botao) {
+    const feito = () => {
+      const antes = botao.dataset.txt || botao.textContent;
+      botao.dataset.txt = antes;
+      botao.textContent = 'Copiado ✓';
+      setTimeout(() => { botao.textContent = antes; }, 1500);
+    };
+    const alternativa = () => {
+      const t = document.createElement('textarea');
+      t.value = texto; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); feito(); } catch (e) { window.prompt('Copia manualmente:', texto); }
+      t.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(feito, alternativa);
+    else alternativa();
+  }
+
+  function botaoMini(texto, aoClicar) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-mini';
+    b.textContent = texto;
+    b.addEventListener('click', () => aoClicar(b));
+    return b;
+  }
+
+  // Lista "As minhas mesas": código, quantos entraram, copiar código/link, entrar, apagar
+  function renderMinhas() {
+    minhasMesas.innerHTML = '';
+    if (!minhas.length) {
+      const li = document.createElement('li');
+      li.textContent = 'Ainda não criaste nenhuma mesa.';
+      minhasMesas.appendChild(li);
+      return;
+    }
+    minhas.forEach(m => {
+      const li = document.createElement('li');
+      const topo = document.createElement('div');
+      topo.className = 'mesa-topo';
+      const cod = document.createElement('span');
+      cod.className = 'mesa-codigo';
+      cod.textContent = m.codigo;
+      const est = document.createElement('span');
+      est.className = 'mesa-estado';
+      est.textContent = m.iniciado ? 'Em jogo' : m.confirmando ? 'A começar...' : m.entraram + '/' + m.totalPlayers + ' entraram';
+      topo.append(cod, est);
+
+      const nomes = document.createElement('div');
+      nomes.className = 'mesa-nomes';
+      nomes.textContent = (m.nomes.length ? m.nomes.join(', ') : 'Ninguém entrou ainda') + ' · ' + m.totalPecas + ' peças' + (m.aposta ? ' · aposta ' + m.aposta + ' moedas' : '');
+
+      const botoes = document.createElement('div');
+      botoes.className = 'mesa-botoes';
+      botoes.append(
+        botaoMini('Copiar código', b => copiar(m.codigo, b)),
+        botaoMini('Copiar link', b => copiar(linkDaMesa(m.codigo), b))
+      );
+      if (!naSala && !m.iniciado && !m.confirmando && m.entraram < m.totalPlayers) {
+        botoes.append(botaoMini('Entrar', () => socket.emit('privada:entrar', { ...credenciais(), codigo: m.codigo })));
+      }
+      if (!m.iniciado && !m.confirmando && m.entraram + (m.donoSentado ? 0 : 1) >= 2) {
+        botoes.append(botaoMini('Começar jogo', () => socket.emit('privada:comecar', { ...credenciais(), salaId: m.id })));
+      }
+      if (!m.iniciado && !m.confirmando) {
+        botoes.append(botaoMini('Apagar', () => {
+          if (window.confirm('Apagar a mesa ' + m.codigo + '?')) {
+            socket.emit('privada:apagar', { ...credenciais(), salaId: m.id });
+          }
+        }));
+      }
+      li.append(topo, nomes, botoes);
+      minhasMesas.appendChild(li);
+    });
+  }
+
+  // Caixa "à espera" (sala pública ou mesa privada)
+  function mostrarEspera(sala) {
+    esperaCaixa.hidden = false;
+    privadaPainel.hidden = true;
+    lobbyStatus.textContent = '';
+    codigoEspera = sala.privada ? sala.codigo : null;
+    document.getElementById('esperaTitulo').textContent =
+      (sala.privada ? 'Mesa privada' : 'Sala') + ': ' + sala.jogadores.length + '/' + sala.totalPlayers + ' jogadores';
+    const c = document.getElementById('esperaCodigo');
+    c.hidden = !codigoEspera;
+    c.textContent = codigoEspera || '';
+    document.getElementById('esperaCopiarCodigoBtn').hidden = !codigoEspera;
+    document.getElementById('esperaCopiarLinkBtn').hidden = !codigoEspera;
+    salaEsperaId = sala.id;
+    if (sala.aposta) document.getElementById('esperaTitulo').textContent += ' · aposta ' + sala.aposta + ' moedas';
+    const souDono = !!(sala.privada && sessao && sala.donoId === sessao.id);
+    const comecar = document.getElementById('esperaComecarBtn');
+    comecar.hidden = !souDono;
+    comecar.disabled = !!sala.confirmando || sala.jogadores.length < 2;
+    lobby.scrollTo(0, 0);
+    renderMinhas();
+  }
+
+  function saiuDaSala() {
+    naSala = false;
+    esperaCaixa.hidden = true;
+    botoesModo().forEach(b => { b.disabled = false; });
+    renderMinhas();
+  }
+
+  document.getElementById('esperaCopiarCodigoBtn').addEventListener('click', e => { if (codigoEspera) copiar(codigoEspera, e.currentTarget); });
+  document.getElementById('esperaCopiarLinkBtn').addEventListener('click', e => { if (codigoEspera) copiar(linkDaMesa(codigoEspera), e.currentTarget); });
+  document.getElementById('esperaSairBtn').addEventListener('click', () => socket.emit('lobby:sair'));
+
+  document.getElementById('abrirPrivadaBtn').addEventListener('click', () => {
+    privadaPainel.hidden = !privadaPainel.hidden;
+    privadaMsg.textContent = '';
+    if (!privadaPainel.hidden) {
+      if (sessao) socket.emit('privada:listar', credenciais());
+      privadaPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+  document.getElementById('privadaFecharBtn').addEventListener('click', () => { privadaPainel.hidden = true; });
+  document.getElementById('privadaN').addEventListener('click', e => {
+    const b = e.target.closest('button[data-n]');
+    if (!b) return;
+    privadaN = Number(b.dataset.n);
+    document.querySelectorAll('#privadaN button').forEach(x => x.classList.toggle('ativo', x === b));
+  });
+  let privadaTipo = 'normal';
+  document.getElementById('privadaTipo').addEventListener('click', e => {
+    const b = e.target.closest('button[data-tipo]');
+    if (!b) return;
+    privadaTipo = b.dataset.tipo;
+    document.querySelectorAll('#privadaTipo button').forEach(x => x.classList.toggle('ativo', x === b));
+    document.getElementById('privadaApostaLinha').hidden = privadaTipo !== 'aposta';
+  });
+  document.querySelector('.aposta-atalhos').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]');
+    if (b) document.getElementById('privadaApostaValor').value = b.dataset.v;
+  });
+  document.getElementById('privadaCriarBtn').addEventListener('click', () => {
+    if (!sessao) return;
+    privadaMsg.textContent = '';
+    const valor = Math.trunc(Number(document.getElementById('privadaApostaValor').value));
+    if (privadaTipo === 'aposta' && !(valor >= 10 && valor <= 10000)) {
+      privadaMsg.textContent = 'A aposta deve ser entre 10 e 10000 moedas.';
+      return;
+    }
+    socket.emit('privada:criar', { ...credenciais(), totalPlayers: privadaN, totalPecas: pecasEscolhidas, tipo: privadaTipo, aposta: valor });
+  });
+  document.getElementById('privadaEntrarBtn').addEventListener('click', () => {
+    const cod = document.getElementById('privadaCodigo').value.trim().toUpperCase();
+    if (cod.length !== 5) { privadaMsg.textContent = 'O código tem 5 caracteres.'; return; }
+    if (!sessao || naSala) return;
+    socket.emit('privada:entrar', { ...credenciais(), codigo: cod });
+  });
+
+  socket.on('privada:minhas', lista => { minhas = lista; renderMinhas(); });
+  socket.on('privada:criada', ({ codigo }) => {
+    privadaMsg.textContent = 'Mesa criada! Código ' + codigo + '. Copia o código ou o link em baixo.';
+  });
+  socket.on('privada:fechada', () => {
+    if (jogoIniciado) return;
+    saiuDaSala();
+    lobbyStatus.textContent = 'A mesa foi apagada pelo criador.';
+  });
+  let salaEsperaId = null;
+  const prestes = document.getElementById('prestes');
+  const prestesTxt = document.getElementById('prestesTxt');
+  const prestesBotoes = document.getElementById('prestesBotoes');
+  let timerPrestes = null;
+
+  // contagem decrescente (segundos) que chama aoMudar a cada segundo
+  function contagem(segundos, aoMudar) {
+    clearInterval(timerPrestes);
+    let resta = segundos;
+    aoMudar(resta);
+    timerPrestes = setInterval(() => {
+      resta--;
+      if (resta <= 0) { clearInterval(timerPrestes); timerPrestes = null; }
+      else aoMudar(resta);
+    }, 1000);
+  }
+  function fecharPrestes() {
+    clearInterval(timerPrestes);
+    timerPrestes = null;
+    prestes.hidden = true;
+  }
+
+  // Criador: "Começar jogo"
+  document.getElementById('esperaComecarBtn').addEventListener('click', () => {
+    if (!sessao || !salaEsperaId) return;
+    document.getElementById('esperaMsg').textContent = '';
+    socket.emit('privada:comecar', { ...credenciais(), salaId: salaEsperaId });
+  });
+  socket.on('privada:aguardando', ({ segundos }) => {
+    document.getElementById('esperaComecarBtn').disabled = true;
+    contagem(segundos, s => { document.getElementById('esperaMsg').textContent = 'A aguardar confirmações... ' + s + 's'; });
+  });
+
+  // Os outros: "Jogo prestes a começar. Participar / Sair"
+  socket.on('privada:prestes', ({ segundos }) => {
+    document.getElementById('esperaMsg').textContent = '';
+    prestesBotoes.hidden = false;
+    prestes.hidden = false;
+    contagem(segundos, s => { prestesTxt.textContent = 'O criador da mesa vai começar o jogo. Queres participar? (' + s + 's)'; });
+  });
+  document.getElementById('prestesSimBtn').addEventListener('click', () => {
+    socket.emit('privada:resposta', { resposta: 'participar' });
+    clearInterval(timerPrestes);
+    timerPrestes = null;
+    prestesBotoes.hidden = true;
+    prestesTxt.textContent = 'Confirmado! A aguardar os outros jogadores...';
+  });
+  document.getElementById('prestesNaoBtn').addEventListener('click', () => {
+    socket.emit('privada:resposta', { resposta: 'sair' });
+    fecharPrestes();
+  });
+
+  socket.on('privada:cancelado', ({ motivo }) => {
+    fecharPrestes();
+    document.getElementById('esperaMsg').textContent = motivo;
+  });
+  socket.on('lobby:saiu', () => {
+    fecharPrestes();
+    document.getElementById('esperaMsg').textContent = '';
+    saiuDaSala();
+  });
+
+  // Link /?sala=CODIGO: entra na mesa assim que houver sessão
+  const codigoDoLink = (new URLSearchParams(location.search).get('sala') || '').trim().toUpperCase();
+  let linkUsado = false;
+  function entrarPeloLink() {
+    if (linkUsado || !codigoDoLink || !sessao || naSala) return;
+    linkUsado = true;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    socket.emit('privada:entrar', { ...credenciais(), codigo: codigoDoLink });
+  }
+  /* ===== Perfil, estatísticas e moedas ===== */
+  const perfilPainel = document.getElementById('perfilPainel');
+  function pedirPerfil() {
+    if (sessao) socket.emit('perfil:pedir', credenciais());
+  }
+  socket.on('perfil:dados', d => {
+    const pôr = (id, v) => { document.getElementById(id).textContent = v; };
+    pôr('saldoValor', d.moedas);
+    pôr('saldoArenaValor', d.moedas);
+    pôr('perfilMoedas', d.moedas);
+    pôr('perfilNome', d.nome);
+    pôr('perfilAvatar', d.nome.charAt(0).toUpperCase());
+    pôr('stJogos', d.jogos);
+    pôr('stVitorias', d.vitorias);
+    pôr('stDerrotas', d.derrotas);
+    pôr('stPerc', d.percentagem + '%');
+    document.getElementById('stBarra').style.width = d.percentagem + '%';
+  });
+  /* ===== Moedas ao vivo, aviso e fim de jogo ===== */
+  const MOTIVOS = {
+    aposta_entrada: 'Entrada da aposta', aposta_devolvida: 'Entrada devolvida',
+    aposta_ganha: 'Prémio da aposta', vitoria: 'Bónus de vitória'
+  };
+  const toastMoedas = document.getElementById('toastMoedas');
+  let timerToast = null;
+  function mostrarToast(delta, motivo) {
+    toastMoedas.className = delta >= 0 ? 'ganho' : 'perda';
+    toastMoedas.innerHTML = '<svg class="moeda"><use href="#moeda"/></svg><b></b><span></span>';
+    toastMoedas.querySelector('b').textContent = (delta >= 0 ? '+' : '') + delta;
+    toastMoedas.querySelector('span').textContent = MOTIVOS[motivo] || '';
+    toastMoedas.hidden = false;
+    toastMoedas.style.animation = 'none'; void toastMoedas.offsetWidth; toastMoedas.style.animation = '';
+    clearTimeout(timerToast);
+    timerToast = setTimeout(() => { toastMoedas.hidden = true; }, 2600);
+  }
+  socket.on('moedas:saldo', ({ moedas, delta, motivo }) => {
+    ['saldoValor', 'perfilMoedas', 'saldoArenaValor'].forEach(id => { document.getElementById(id).textContent = moedas; });
+    if (delta) {
+      mostrarToast(delta, motivo);
+      const sa = document.getElementById('saldoArena');
+      sa.classList.remove('pulsa'); void sa.offsetWidth; sa.classList.add('pulsa');
+    }
+  });
+
+  let premiosFim = [];
+  const fimJogo = document.getElementById('fimJogo');
+  function desenharPremios() {
+    const el = document.getElementById('fimPremios');
+    el.innerHTML = '';
+    premiosFim.forEach(p => {
+      const d = document.createElement('div');
+      d.className = 'premio';
+      d.innerHTML = '<svg class="moeda"><use href="#moeda"/></svg><b></b><span></span>';
+      d.querySelector('b').textContent = '+' + p.valor;
+      d.querySelector('span').textContent = p.nome + ' · ' + (MOTIVOS[p.motivo] || '');
+      el.appendChild(d);
+    });
+  }
+  socket.on('jogo:premios', lista => { premiosFim = lista; if (!fimJogo.hidden) desenharPremios(); });
+  function perguntarFim(linhas) {
+    return new Promise(resolver => {
+      document.getElementById('fimLinhas').textContent = linhas.join('\n');
+      desenharPremios();
+      fimJogo.hidden = false;
+      const fechar = quer => { fimJogo.hidden = true; premiosFim = []; resolver(quer); };
+      document.getElementById('fimSimBtn').onclick = () => fechar(true);
+      document.getElementById('fimNaoBtn').onclick = () => fechar(false);
+    });
+  }
+
+  /* ===== Chat ao vivo (não guarda nada) ===== */
+  const chatCaixa = document.getElementById('chatCaixa');
+  const chatTexto = document.getElementById('chatTexto');
+  const chatFlutua = document.getElementById('chatFlutua');
+  document.getElementById('chatBtn').addEventListener('click', () => {
+    chatCaixa.hidden = !chatCaixa.hidden;
+    if (!chatCaixa.hidden) chatTexto.focus();
+  });
+  function enviarChat() {
+    const t = chatTexto.value.trim();
+    if (!t || meuIndice === null) return;
+    socket.emit('chat:enviar', { texto: t, nome: nome(meuIndice) });
+    chatTexto.value = '';
+    chatCaixa.hidden = true;
+  }
+  document.getElementById('chatEnviarBtn').addEventListener('click', enviarChat);
+  chatTexto.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChat(); }
+  });
+  socket.on('chat:msg', ({ nome: n, texto }) => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg';
+    const b = document.createElement('b');
+    b.textContent = n;
+    d.append(b, document.createTextNode(texto));
+    chatFlutua.appendChild(d);
+    while (chatFlutua.children.length > 5) chatFlutua.firstChild.remove();
+    setTimeout(() => d.classList.add('sai'), 5000);
+    setTimeout(() => d.remove(), 5900);
+  });
+
+  function alternarPerfil() {
+    perfilPainel.hidden = !perfilPainel.hidden;
+    if (!perfilPainel.hidden) {
+      pedirPerfil();
+      perfilPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  document.getElementById('perfilAbrir').addEventListener('click', alternarPerfil);
+  document.getElementById('saldoPill').addEventListener('click', alternarPerfil);
+  document.getElementById('perfilFecharBtn').addEventListener('click', () => { perfilPainel.hidden = true; });
+
+  function aposSessao() {
+    pedirPerfil();
+    if (!sessao) return;
+    socket.emit('privada:listar', credenciais());
+    entrarPeloLink();
+  }
+
+  socket.on('connect', () => {
+    socket.emit('lobby:listarSalas');
+    aposSessao();
+  });
+
+  // o servidor não reconheceu a sessão: volta ao ecrã do nome
+  socket.on('conta:invalida', () => {
+    try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {}
+    sessao = null;
+    naSala = false;
+    botoesModo().forEach(b => { b.disabled = false; });
+    lobbyStatus.textContent = '';
+    mostrarEcra();
+  });
 
   socket.on('lobby:salas', (salas) => {
     listaSalas.innerHTML = '';
@@ -852,7 +1930,7 @@
       li.classList.add('sala-item');
       li.addEventListener('click', () => {
         if (naSala) return;
-        socket.emit('lobby:entrarNaSala', { salaId: sala.id, nome: lobbyNome.value.trim() || undefined });
+        socket.emit('lobby:entrarNaSala', { salaId: sala.id, id: sessao.id, token: sessao.token });
         marcarNaSala();
       });
       listaSalas.appendChild(li);
@@ -862,14 +1940,19 @@
   socket.on('lobby:voce', ({ indice, nome: n }) => {
     meuIndice = indice;
     if (n) nomesPorIndice[indice] = n;
+    naSala = true;
+    botoesModo().forEach(b => { b.disabled = true; });
+    girarTabuleiro(indice);
+    if (jogoIniciado) renderizar();
   });
 
   // Sala ainda à espera de jogadores (também volta a aparecer se, após "continuar", faltar gente)
   socket.on('lobby:atualizado', (sala) => {
     sala.jogadores.forEach(j => { nomesPorIndice[j.indice] = j.nome; });
     jogoIniciado = false;
+    document.getElementById('saldoArena').hidden = true;
     lobby.classList.remove('escondido');
-    lobbyStatus.textContent = 'Jogadores na sala: ' + sala.jogadores.length + '/' + sala.totalPlayers;
+    mostrarEspera(sala);
   });
 
   socket.on('jogo:iniciar', (sala) => {
@@ -881,9 +1964,14 @@
     mostrarDados([]);
     limparSelecao();
     jogoIniciado = true;
+    document.getElementById('saldoArena').hidden = false;
+    esperaCaixa.hidden = true;
+    fecharPrestes();
+    document.getElementById('esperaMsg').textContent = '';
     lobby.classList.add('escondido');
     calcularMinimo();
     aplicar();
+    setTimeout(zoomDeEntrada, 300);   // dá um instante para ver o tabuleiro inteiro
   });
 
   /* ===== Eventos do jogo ===== */
@@ -925,25 +2013,31 @@
   socket.on('jogo:erro', (mensagem) => {
     // se estava a rodar os dados, para a animação
     if (girando) { pararAnimacao(); mostrarDados([]); }
+    if (!jogoIniciado) {
+      (privadaPainel.hidden ? lobbyStatus : privadaMsg).textContent = mensagem;
+      if (esperaCaixa.hidden) saiuDaSala();
+    }
     atualizarVez(mensagem);
     atualizarBotao();
   });
 
   socket.on('jogo:terminado', ({ classificacaoFinal }) => {
+    setTimeout(pedirPerfil, 1500);   // dá tempo ao servidor para gravar o resultado
     atualizarBotao();
-    // pequena pausa para o tabuleiro final ser desenhado antes do confirm()
-    setTimeout(() => {
+    // pequena pausa para o tabuleiro final ser desenhado antes da janela de fim
+    setTimeout(async () => {
       const linhas = classificacaoFinal.map(j =>
         j.abandonou ? j.nome + ': abandonou' : j.classificacao + 'º lugar: ' + j.nome);
-      const quer = window.confirm('Jogo terminado!\n' + linhas.join('\n') + '\n\nQueres jogar de novo com os mesmos jogadores?');
+      const quer = await perguntarFim(linhas);
       socket.emit('posJogo:decisao', { decisao: quer ? 'continuar' : 'sair' });
       if (quer) {
         lobbyStatus.textContent = 'À espera dos outros jogadores...';
       } else {
         naSala = false;
         jogoIniciado = false;
+        document.getElementById('saldoArena').hidden = true;
         lobby.classList.remove('escondido');
-        lobbyEntrarBtn.disabled = false;
+        botoesModo().forEach(b => { b.disabled = false; });
         lobbyStatus.textContent = 'Saíste da sala. Escolhe as opções para entrar noutro jogo.';
         socket.emit('lobby:listarSalas');
       }
