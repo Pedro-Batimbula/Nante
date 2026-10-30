@@ -627,6 +627,13 @@ io.on('connection', (socket) => {
     avisarPresenca(conta.id);
     enviarLista(conta.id);
   });
+  socket.on('amigos:procurar', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const r = await contas.procurarJogadores(conta.id, d.termo);
+    if (r.erro) { socket.emit('amigos:aviso', { erro: true, texto: r.erro }); return; }
+    socket.emit('amigos:resultados', { termo: String(d.termo || ''), lista: r.lista });
+  });
   socket.on('amigos:listar', async (d) => {
     const conta = await contaDe(socket, d);
     if (conta) enviarLista(conta.id);
