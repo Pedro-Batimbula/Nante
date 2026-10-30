@@ -15,7 +15,7 @@ require('./admin')(app);   // ADMIN
 // CONTAS: criar conta (só nome) e validar a sessão guardada no aparelho
 app.use(express.json());
 app.post('/conta/criar', async (req, res) => {
-  const r = await contas.criar(req.body && req.body.nome);
+  const r = await contas.criar(req.body && req.body.nome, req.body && req.body.senha);
   res.status(r.erro ? 400 : 200).json(r);
 });
 app.post('/conta/validar', async (req, res) => {
