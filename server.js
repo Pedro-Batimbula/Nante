@@ -37,6 +37,7 @@ app.post('/conta/senha', async (req, res) => {
   const r = await contas.definirSenha(b.id, b.token, b.senha);
   res.status(r.erro ? (r.status || 400) : 200).json(r);
 });
+app.get('/diagnostico', async (req, res) => res.json(await contas.diagnostico()));
 app.post('/conta/entrar', async (req, res) => {
   const b = req.body || {};
   const r = await contas.entrar(b.nome, b.senha);
