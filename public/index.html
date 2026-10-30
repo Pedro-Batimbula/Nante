@@ -363,6 +363,50 @@
   .barra i{ display: block; height: 100%; width: 0; background: linear-gradient(to right, #2ecc71, #ffd400); transition: width .6s; }
   #perfilPainel #sairContaBtn{ width: 100%; }
 
+  /* ===== Amigos ===== */
+  .m-amigos{ position: relative; background: linear-gradient(to bottom, #3498db, #1f6fa8); box-shadow: 0 5px 0 #144a73, 0 9px 14px rgba(0,0,0,.4); }
+  .m-amigos i, #pedidosBadge{
+    position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; background: #e74c3c; color: #fff; text-align: center;
+    font: bold 12px/20px 'Trebuchet MS', Arial, sans-serif; font-style: normal;
+  }
+  #pedidosBadge{ top: -8px; right: -2px; }
+  .privada-opcoes button{ position: relative; }
+  .lista-amigos{ list-style: none; margin: 0 0 4px; padding: 0; }
+  .lista-amigos li:only-child:not(.amigo){ font-size: 13px; color: rgba(255,255,255,.65); }
+  .amigo{
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 8px; border-radius: 12px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+  }
+  .amigo-ponto{ width: 12px; height: 12px; flex: none; border-radius: 50%; background: #777; }
+  .amigo-ponto.online{ background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+  .amigo-ponto.mesa{ background: #ffd400; }
+  .amigo-ponto.jogo{ background: #e67e22; }
+  .amigo-info{ flex: 1; min-width: 0; }
+  .amigo-info b{ display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .amigo-info small{ font-size: 11px; color: rgba(255,255,255,.65); }
+  .amigo-botoes{ display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  #amigosMsg{ min-height: 18px; margin-bottom: 10px; text-align: center; font-size: 13px; color: #ffd400; }
+  #amigoNome{
+    flex: 1; min-width: 0; padding: 10px; color: #fff;
+    font: 16px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  #amigoPedirBtn{
+    padding: 10px 14px; border: 2px solid #fff; border-radius: 12px; color: #fff;
+    background: linear-gradient(to bottom, rgb(14, 29, 194) 30%, rgb(0, 0, 0) 100%);
+    font: bold 15px 'Trebuchet MS', Arial, sans-serif; cursor: pointer;
+  }
+  #toastAviso[hidden]{ display: none; }
+  #toastAviso{
+    position: fixed; top: calc(70px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 500;
+    transform: translateX(-50%); max-width: min(340px, 92vw); padding: 10px 16px; border-radius: 14px;
+    text-align: center; pointer-events: none; color: #fff; background: rgba(0,0,0,.9);
+    border: 2px solid #3498db; box-shadow: 0 6px 18px rgba(0,0,0,.6);
+    font: bold 14px 'Trebuchet MS', Arial, sans-serif; animation: toastEntra .35s ease-out;
+  }
+  #toastAviso.erro{ border-color: #ff8a80; }
+
   /* ===== Apostas ===== */
   .privada-aposta{ margin-bottom: 10px; }
   .privada-aposta label{ display: block; margin-bottom: 6px; font-size: 13px; color: rgba(255,255,255,.75); }
@@ -791,8 +835,52 @@
     <div class="modos-pequenos">
       <button type="button" class="modo m3" data-jogadores="3"><b>3</b><span>3 Jogadores</span></button>
       <button type="button" id="abrirPrivadaBtn" class="modo m-priv"><b>🔒</b><span>Mesa privada</span></button>
-      <button type="button" class="modo bloqueado" disabled><b>👥</b><span>Amigos<small>em breve</small></span></button>
+      <button type="button" id="abrirAmigosBtn" class="modo m-amigos"><b>👥</b><span>Amigos</span><i id="amigosBadge" hidden>0</i></button>
     </div>
+
+    <section id="amigosPainel" class="privada" hidden>
+      <div class="privada-topo">
+        <h2>Amigos</h2>
+        <button type="button" class="btn-mini" id="amigosFecharBtn">Fechar</button>
+      </div>
+      <div class="privada-opcoes" id="amigosAbas">
+        <button type="button" class="ativo" data-aba="amigos">Amigos</button>
+        <button type="button" data-aba="pedidos">Pedidos<i id="pedidosBadge" hidden>0</i></button>
+        <button type="button" data-aba="adicionar">Adicionar</button>
+      </div>
+      <div id="amigosMsg"></div>
+
+      <div id="abaAmigos">
+        <ul id="listaAmigos" class="lista-amigos"><li>Ainda não tens amigos.</li></ul>
+      </div>
+
+      <div id="abaPedidos" hidden>
+        <div class="privada-bloco">
+          <b>Recebidos</b>
+          <ul id="listaRecebidos" class="lista-amigos"></ul>
+        </div>
+        <div class="privada-bloco">
+          <b>Enviados</b>
+          <ul id="listaEnviados" class="lista-amigos"></ul>
+        </div>
+      </div>
+
+      <div id="abaAdicionar" hidden>
+        <div class="privada-bloco">
+          <b>Adicionar pelo nome</b>
+          <div class="privada-linha">
+            <input id="amigoNome" type="text" maxlength="20" placeholder="Nome do jogador" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <button type="button" id="amigoPedirBtn">Enviar</button>
+          </div>
+          <p class="privada-nota">Escreve o nome exato do jogador.</p>
+        </div>
+        <div class="privada-bloco">
+          <b>Link de convite</b>
+          <p class="privada-nota">Quem criar conta por este link fica teu amigo e tu ganhas 50 moedas (até 20 convites).</p>
+          <button type="button" class="btn-mini" id="amigoLinkBtn">Copiar link de convite</button>
+        </div>
+      </div>
+    </section>
 
     <section id="privadaPainel" class="privada" hidden>
       <div class="privada-topo">
@@ -854,6 +942,7 @@
 </div>
 <!-- Aviso de moedas e fim de jogo -->
 <div id="toastMoedas" hidden></div>
+<div id="toastAviso" hidden></div>
 <div id="fimJogo" hidden>
   <div class="prestes-caixa">
     <b>Jogo terminado!</b>
@@ -1476,7 +1565,7 @@
     try {
       const r = await fetch(modoEntrar ? '/conta/entrar' : '/conta/criar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: n, senha: contaSenha.value })
+        body: JSON.stringify({ nome: n, senha: contaSenha.value, convite: modoEntrar ? undefined : amigoDoLink })
       });
       const d = await r.json();
       if (!r.ok || d.erro) { contaErro.textContent = d.erro || 'Não foi possível criar a conta.'; return; }
@@ -1676,6 +1765,7 @@
     document.getElementById('esperaCopiarCodigoBtn').hidden = !codigoEspera;
     document.getElementById('esperaCopiarLinkBtn').hidden = !codigoEspera;
     salaEsperaId = sala.id;
+    setTimeout(renderAmigos, 0);
     if (sala.aposta) document.getElementById('esperaTitulo').textContent += ' · aposta ' + sala.aposta + ' moedas';
     const souDono = !!(sala.privada && sessao && sala.donoId === sessao.id);
     const comecar = document.getElementById('esperaComecarBtn');
@@ -1686,6 +1776,7 @@
   }
 
   function saiuDaSala() {
+    setTimeout(renderAmigos, 0);
     naSala = false;
     esperaCaixa.hidden = true;
     botoesModo().forEach(b => { b.disabled = false; });
@@ -1821,6 +1912,149 @@
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
     socket.emit('privada:entrar', { ...credenciais(), codigo: codigoDoLink });
   }
+  /* ===== Amigos ===== */
+  let amigoDoLink = (new URLSearchParams(location.search).get('amigo') || '').trim() || null;
+  let amigosLista = { amigos: [], recebidos: [], enviados: [] };
+  const ESTADO_TXT = { online: 'Online', mesa: 'Numa mesa', jogo: 'A jogar', offline: 'Offline' };
+  const amigosPainel = document.getElementById('amigosPainel');
+  const amigosMsg = document.getElementById('amigosMsg');
+  const toastAviso = document.getElementById('toastAviso');
+  let timerAviso = null;
+
+  function mostrarAviso(texto, erro) {
+    toastAviso.className = erro ? 'erro' : '';
+    toastAviso.textContent = texto;
+    toastAviso.hidden = false;
+    toastAviso.style.animation = 'none'; void toastAviso.offsetWidth; toastAviso.style.animation = '';
+    clearTimeout(timerAviso);
+    timerAviso = setTimeout(() => { toastAviso.hidden = true; }, 3500);
+  }
+
+  function linhaAmigo(nome, sub, estado, botoes) {
+    const li = document.createElement('li');
+    li.className = 'amigo';
+    if (estado) {
+      const ponto = document.createElement('span');
+      ponto.className = 'amigo-ponto ' + estado;
+      li.appendChild(ponto);
+    }
+    const info = document.createElement('div');
+    info.className = 'amigo-info';
+    const b = document.createElement('b');
+    b.textContent = nome;
+    info.appendChild(b);
+    if (sub) {
+      const s = document.createElement('small');
+      s.textContent = sub;
+      info.appendChild(s);
+    }
+    const bt = document.createElement('div');
+    bt.className = 'amigo-botoes';
+    botoes.forEach(x => bt.appendChild(x));
+    li.append(info, bt);
+    return li;
+  }
+
+  function renderAmigos() {
+    const l = amigosLista;
+    const ordem = { online: 0, mesa: 1, jogo: 2, offline: 3 };
+    const podeConvidar = !!(sessao && !esperaCaixa.hidden && codigoEspera && salaEsperaId && !jogoIniciado);
+
+    const lista = document.getElementById('listaAmigos');
+    lista.innerHTML = '';
+    if (!l.amigos.length) {
+      lista.innerHTML = '<li>Ainda não tens amigos. Usa o separador "Adicionar".</li>';
+    }
+    [...l.amigos]
+      .sort((a, b) => (ordem[a.estado || 'offline'] - ordem[b.estado || 'offline']) || a.nome.localeCompare(b.nome))
+      .forEach(a => {
+        const estado = a.estado || 'offline';
+        const botoes = [];
+        if (podeConvidar && estado === 'online') {
+          botoes.push(botaoMini('Convidar', () => {
+            socket.emit('amigos:convidar', { ...credenciais(), amigoId: a.id, salaId: salaEsperaId });
+          }));
+        }
+        botoes.push(botaoMini('Remover', () => {
+          if (window.confirm('Remover ' + a.nome + ' dos amigos?')) {
+            socket.emit('amigos:remover', { ...credenciais(), outroId: a.id });
+          }
+        }));
+        lista.appendChild(linhaAmigo(
+          a.nome,
+          ESTADO_TXT[estado] + ' · ' + a.vitorias + ' vitórias · ' + a.moedas + ' moedas',
+          estado, botoes
+        ));
+      });
+
+    const rec = document.getElementById('listaRecebidos');
+    rec.innerHTML = '';
+    if (!l.recebidos.length) rec.innerHTML = '<li>Nenhum pedido recebido.</li>';
+    l.recebidos.forEach(p => {
+      rec.appendChild(linhaAmigo(p.nome, 'quer ser teu amigo', null, [
+        botaoMini('Aceitar', () => socket.emit('amigos:responder', { ...credenciais(), pedidoId: p.pedidoId, aceitar: true })),
+        botaoMini('Recusar', () => socket.emit('amigos:responder', { ...credenciais(), pedidoId: p.pedidoId, aceitar: false }))
+      ]));
+    });
+
+    const env = document.getElementById('listaEnviados');
+    env.innerHTML = '';
+    if (!l.enviados.length) env.innerHTML = '<li>Nenhum pedido enviado.</li>';
+    l.enviados.forEach(p => {
+      env.appendChild(linhaAmigo(p.nome, 'a aguardar resposta', null, [
+        botaoMini('Cancelar', () => socket.emit('amigos:remover', { ...credenciais(), outroId: p.id }))
+      ]));
+    });
+
+    const n = l.recebidos.length;
+    ['amigosBadge', 'pedidosBadge'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = n;
+      el.hidden = n === 0;
+    });
+  }
+
+  socket.on('amigos:lista', l => { amigosLista = l; renderAmigos(); });
+  socket.on('amigos:presenca', ({ id, estado }) => {
+    const a = amigosLista.amigos.find(x => x.id === id);
+    if (a && a.estado !== estado) { a.estado = estado; renderAmigos(); }
+  });
+  socket.on('amigos:aviso', ({ texto, erro }) => {
+    amigosMsg.textContent = texto;
+    amigosMsg.style.color = erro ? '#ff8a80' : '#ffd400';
+    mostrarAviso(texto, erro);
+  });
+
+  document.getElementById('abrirAmigosBtn').addEventListener('click', () => {
+    amigosPainel.hidden = !amigosPainel.hidden;
+    amigosMsg.textContent = '';
+    if (!amigosPainel.hidden) {
+      if (sessao) socket.emit('amigos:listar', credenciais());
+      amigosPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+  document.getElementById('amigosFecharBtn').addEventListener('click', () => { amigosPainel.hidden = true; });
+  document.getElementById('amigosAbas').addEventListener('click', e => {
+    const b = e.target.closest('button[data-aba]');
+    if (!b) return;
+    document.querySelectorAll('#amigosAbas button').forEach(x => x.classList.toggle('ativo', x === b));
+    [['amigos', 'abaAmigos'], ['pedidos', 'abaPedidos'], ['adicionar', 'abaAdicionar']].forEach(([aba, id]) => {
+      document.getElementById(id).hidden = aba !== b.dataset.aba;
+    });
+  });
+  function pedirAmigo() {
+    const campo = document.getElementById('amigoNome');
+    const nome = campo.value.trim();
+    if (!sessao || nome.length < 2) { amigosMsg.textContent = 'Escreve o nome do jogador.'; return; }
+    socket.emit('amigos:pedir', { ...credenciais(), nome });
+    campo.value = '';
+  }
+  document.getElementById('amigoPedirBtn').addEventListener('click', pedirAmigo);
+  document.getElementById('amigoNome').addEventListener('keydown', e => { if (e.key === 'Enter') pedirAmigo(); });
+  document.getElementById('amigoLinkBtn').addEventListener('click', e => {
+    if (sessao) copiar(location.origin + '/?amigo=' + sessao.id, e.currentTarget);
+  });
+
   /* ===== Perfil, estatísticas e moedas ===== */
   const perfilPainel = document.getElementById('perfilPainel');
   function pedirPerfil() {
@@ -1842,7 +2076,8 @@
   /* ===== Moedas ao vivo, aviso e fim de jogo ===== */
   const MOTIVOS = {
     aposta_entrada: 'Entrada da aposta', aposta_devolvida: 'Entrada devolvida',
-    aposta_ganha: 'Prémio da aposta', vitoria: 'Bónus de vitória'
+    aposta_ganha: 'Prémio da aposta', vitoria: 'Bónus de vitória',
+    matada: 'Matada!', convite_amigo: 'Convite de amigo'
   };
   const toastMoedas = document.getElementById('toastMoedas');
   let timerToast = null;
@@ -1975,6 +2210,13 @@
   document.getElementById('perfilFecharBtn').addEventListener('click', () => { perfilPainel.hidden = true; });
 
   function aposSessao() {
+    if (sessao) {
+      socket.emit('amigos:ligar', credenciais());
+      if (amigoDoLink) {
+        amigoDoLink = null;   // o convite só serve para criar conta nova
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      }
+    }
     pedirPerfil();
     if (!sessao) return;
     socket.emit('privada:listar', credenciais());
