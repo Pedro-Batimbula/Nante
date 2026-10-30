@@ -43,6 +43,17 @@ async function iniciar() {
       INSERT INTO moedas_movimentos (jogador_id, valor, motivo)
       SELECT c.id, 100, 'bonus_inicial' FROM nante_contas c
       WHERE NOT EXISTS (SELECT 1 FROM moedas_movimentos m WHERE m.jogador_id = c.id AND m.motivo = 'bonus_inicial')`);
+    // Amigos: um pedido (pendente) que passa a aceite; um só registo por par de jogadores
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nante_amigos (
+        id SERIAL PRIMARY KEY,
+        de_id INTEGER NOT NULL REFERENCES nante_contas(id) ON DELETE CASCADE,
+        para_id INTEGER NOT NULL REFERENCES nante_contas(id) ON DELETE CASCADE,
+        estado TEXT NOT NULL DEFAULT 'pendente',
+        criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CHECK (de_id <> para_id)
+      )`);
+    await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS ux_amigos_par ON nante_amigos (LEAST(de_id, para_id), GREATEST(de_id, para_id))');
   }
   pronto = true;
   console.log('Contas: ' + (pool ? 'tabela "jogadores" pronta no Neon.' : 'sem DATABASE_URL, só em memória.'));
@@ -226,4 +237,150 @@ async function registarResultado(id, venceu) {
   }
 }
 
-module.exports = { iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado };
+// ===== Amigos (só com base de dados) =====
+const SEM_BD = { erro: 'Os amigos precisam da base de dados.' };
+const PREMIO_CONVITE = 50, MAX_CONVITES_PAGOS = 20;
+
+// Envia um pedido pelo nome. Se o outro já tinha enviado um pedido, ficam logo amigos.
+async function pedirAmizade(deId, nomeBruto) {
+  if (!pool) return SEM_BD;
+  const nome = limparNome(nomeBruto).toLowerCase();
+  if (nome.length < 2) return { erro: 'Escreve o nome do jogador.' };
+  try {
+    const a = await pool.query('SELECT id, nome FROM nante_contas WHERE nome_minusculas = $1', [nome]);
+    const alvo = a.rows[0];
+    if (!alvo) return { erro: 'Não existe nenhum jogador com esse nome.' };
+    if (alvo.id === deId) return { erro: 'Não podes adicionar-te a ti próprio.' };
+    const e = await pool.query(
+      'SELECT id, de_id, estado FROM nante_amigos WHERE LEAST(de_id, para_id) = LEAST($1::int, $2::int) AND GREATEST(de_id, para_id) = GREATEST($1::int, $2::int)',
+      [deId, alvo.id]
+    );
+    const ex = e.rows[0];
+    if (ex) {
+      if (ex.estado === 'aceite') return { erro: alvo.nome + ' já é teu amigo.' };
+      if (ex.de_id === deId) return { erro: 'Já enviaste um pedido a ' + alvo.nome + '.' };
+      await pool.query("UPDATE nante_amigos SET estado = 'aceite' WHERE id = $1", [ex.id]);
+      return { ok: true, aceite: true, alvo };
+    }
+    await pool.query('INSERT INTO nante_amigos (de_id, para_id) VALUES ($1, $2)', [deId, alvo.id]);
+    return { ok: true, aceite: false, alvo };
+  } catch (e) {
+    if (e.code === '23505') return { erro: 'Já existe um pedido entre vocês.' };
+    console.error('Contas: erro ao pedir amizade:', e.message);
+    return { erro: 'Não foi possível enviar o pedido.' };
+  }
+}
+
+// Aceitar ou recusar um pedido que recebi
+async function responderPedido(meuId, pedidoId, aceitar) {
+  if (!pool) return SEM_BD;
+  const n = Number(pedidoId);
+  if (!Number.isInteger(n)) return { erro: 'Pedido inválido.' };
+  try {
+    if (aceitar) {
+      const r = await pool.query(
+        `UPDATE nante_amigos AS a SET estado = 'aceite'
+         FROM nante_contas c
+         WHERE a.id = $1 AND a.para_id = $2 AND a.estado = 'pendente' AND c.id = a.de_id
+         RETURNING c.id AS outro_id, c.nome AS outro_nome`,
+        [n, meuId]
+      );
+      if (!r.rowCount) return { erro: 'Esse pedido já não existe.' };
+      return { ok: true, aceite: true, outro: { id: r.rows[0].outro_id, nome: r.rows[0].outro_nome } };
+    }
+    const r = await pool.query(
+      "DELETE FROM nante_amigos WHERE id = $1 AND para_id = $2 AND estado = 'pendente' RETURNING de_id",
+      [n, meuId]
+    );
+    if (!r.rowCount) return { erro: 'Esse pedido já não existe.' };
+    return { ok: true, aceite: false, outro: { id: r.rows[0].de_id } };
+  } catch (e) {
+    console.error('Contas: erro ao responder pedido:', e.message);
+    return { erro: 'Não foi possível responder ao pedido.' };
+  }
+}
+
+// Remover um amigo ou cancelar um pedido que enviei (serve para os dois)
+async function removerAmizade(meuId, outroId) {
+  if (!pool) return SEM_BD;
+  const o = Number(outroId);
+  if (!Number.isInteger(o)) return { erro: 'Pedido inválido.' };
+  try {
+    const r = await pool.query(
+      'DELETE FROM nante_amigos WHERE (de_id = $1 AND para_id = $2) OR (de_id = $2 AND para_id = $1)',
+      [meuId, o]
+    );
+    return { ok: true, removido: r.rowCount > 0 };
+  } catch (e) {
+    console.error('Contas: erro ao remover amigo:', e.message);
+    return { erro: 'Não foi possível remover.' };
+  }
+}
+
+// Amigos, pedidos recebidos e pedidos enviados
+async function listarAmigos(meuId) {
+  const vazio = { amigos: [], recebidos: [], enviados: [] };
+  if (!pool) return vazio;
+  try {
+    const r = await pool.query(
+      `SELECT a.id AS pedido_id, a.para_id, a.estado, c.id AS outro_id, c.nome, c.vitorias, c.moedas
+       FROM nante_amigos a
+       JOIN nante_contas c ON c.id = CASE WHEN a.de_id = $1 THEN a.para_id ELSE a.de_id END
+       WHERE a.de_id = $1 OR a.para_id = $1
+       ORDER BY c.nome_minusculas`,
+      [meuId]
+    );
+    const res = { amigos: [], recebidos: [], enviados: [] };
+    r.rows.forEach(l => {
+      const o = { id: l.outro_id, nome: l.nome };
+      if (l.estado === 'aceite') res.amigos.push({ ...o, vitorias: l.vitorias, moedas: l.moedas });
+      else if (l.para_id === meuId) res.recebidos.push({ ...o, pedidoId: l.pedido_id });
+      else res.enviados.push({ ...o, pedidoId: l.pedido_id });
+    });
+    return res;
+  } catch (e) {
+    console.error('Contas: erro ao listar amigos:', e.message);
+    return vazio;
+  }
+}
+
+// Só os ids dos amigos aceites (para a presença: quem está online)
+async function idsDosAmigos(meuId) {
+  if (!pool) return [];
+  try {
+    const r = await pool.query(
+      "SELECT CASE WHEN de_id = $1 THEN para_id ELSE de_id END AS id FROM nante_amigos WHERE estado = 'aceite' AND (de_id = $1 OR para_id = $1)",
+      [meuId]
+    );
+    return r.rows.map(l => l.id);
+  } catch (e) {
+    return [];
+  }
+}
+
+// Conta nova criada pelo link de convite de um jogador: ficam amigos e ele ganha moedas
+// (no máximo MAX_CONVITES_PAGOS convites pagos por jogador)
+async function amizadePorLink(novoId, anfitriaoId) {
+  const h = Number(anfitriaoId);
+  if (!pool || !Number.isInteger(h) || h === novoId) return null;
+  try {
+    const a = await pool.query('SELECT id, nome FROM nante_contas WHERE id = $1', [h]);
+    if (!a.rows[0]) return null;
+    await pool.query("INSERT INTO nante_amigos (de_id, para_id, estado) VALUES ($1, $2, 'aceite') ON CONFLICT DO NOTHING", [h, novoId]);
+    const c = await pool.query("SELECT COUNT(*)::int AS n FROM moedas_movimentos WHERE jogador_id = $1 AND motivo = 'convite_amigo'", [h]);
+    let moedas;
+    if (c.rows[0].n < MAX_CONVITES_PAGOS) {
+      const r = await mexerMoedas(h, PREMIO_CONVITE, 'convite_amigo');
+      moedas = r.moedas;
+    }
+    return { anfitriao: a.rows[0], premio: moedas !== undefined ? PREMIO_CONVITE : 0, moedas };
+  } catch (e) {
+    console.error('Contas: erro no convite por link:', e.message);
+    return null;
+  }
+}
+
+module.exports = {
+  iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado,
+  pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink
+};
