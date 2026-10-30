@@ -344,6 +344,31 @@ async function listarAmigos(meuId) {
   }
 }
 
+// Procura jogadores pelo nome (basta uma parte). Diz se já são amigos ou se há pedido pendente.
+async function procurarJogadores(meuId, termoBruto) {
+  if (!pool) return SEM_BD;
+  const t = limparNome(termoBruto).toLowerCase();
+  if (t.length < 2) return { lista: [] };
+  try {
+    const padrao = '%' + t.replace(/[\\%_]/g, c => '\\' + c) + '%';
+    const r = await pool.query(
+      `SELECT c.id, c.nome, c.vitorias, a.estado AS rel
+       FROM nante_contas c
+       LEFT JOIN nante_amigos a
+         ON LEAST(a.de_id, a.para_id) = LEAST($1::int, c.id)
+        AND GREATEST(a.de_id, a.para_id) = GREATEST($1::int, c.id)
+       WHERE c.id <> $1::int AND c.nome_minusculas LIKE $2
+       ORDER BY (c.nome_minusculas = $3) DESC, c.nome_minusculas
+       LIMIT 8`,
+      [meuId, padrao, t]
+    );
+    return { lista: r.rows.map(l => ({ id: l.id, nome: l.nome, vitorias: l.vitorias, rel: l.rel || null })) };
+  } catch (e) {
+    console.error('Contas: erro ao procurar jogadores:', e.message);
+    return { erro: 'Erro na pesquisa: ' + e.message };   // temporário, para diagnóstico
+  }
+}
+
 // Só os ids dos amigos aceites (para a presença: quem está online)
 async function idsDosAmigos(meuId) {
   if (!pool) return [];
@@ -382,5 +407,6 @@ async function amizadePorLink(novoId, anfitriaoId) {
 
 module.exports = {
   iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado,
-  pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink
+  pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink, procurarJogadores
 };
+
