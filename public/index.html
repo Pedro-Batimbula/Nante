@@ -387,6 +387,45 @@
   .amigo-info small{ font-size: 11px; color: rgba(255,255,255,.65); }
   .amigo-botoes{ display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   #amigosMsg{ min-height: 18px; margin-bottom: 10px; text-align: center; font-size: 13px; color: #ffd400; }
+
+  /* Mensagens entre amigos */
+  .amigo-botoes{ align-items: center; }
+  .btn-icone{ position: relative; min-width: 38px; padding: 8px 10px; font-size: 16px; line-height: 1; }
+  .btn-icone i{
+    position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 9px; background: #e74c3c; color: #fff; text-align: center;
+    font: bold 11px/18px 'Trebuchet MS', Arial, sans-serif; font-style: normal;
+  }
+  .menu-mais{ position: relative; }
+  .menu-lista{
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 160px; padding: 6px;
+    display: flex; flex-direction: column; gap: 6px; border-radius: 12px;
+    background: #101a10; border: 2px solid rgba(255,255,255,.4); box-shadow: 0 8px 18px rgba(0,0,0,.6);
+  }
+  .menu-lista button{ width: 100%; text-align: left; }
+  .menu-lista .perigo{ color: #ff8a80; border-color: #ff8a80; }
+  .conversa-topo{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .conversa-topo b{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .conversa-lista{
+    display: flex; flex-direction: column; gap: 6px; height: 260px; overflow-y: auto; padding: 8px; margin-bottom: 10px;
+    border-radius: 12px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.2);
+    -webkit-overflow-scrolling: touch;
+  }
+  .balao{ max-width: 80%; padding: 7px 11px; border-radius: 14px; font-size: 14px; word-break: break-word; }
+  .balao small{ display: block; margin-top: 2px; font-size: 10px; opacity: .6; }
+  .balao.eu{ align-self: flex-end; background: #1f6fa8; border-bottom-right-radius: 4px; }
+  .balao.el{ align-self: flex-start; background: rgba(255,255,255,.14); border-bottom-left-radius: 4px; }
+  .balao.falhou small{ color: #ff8a80; opacity: 1; }
+  .conversa-vazia{ margin: auto; text-align: center; font-size: 13px; color: rgba(255,255,255,.6); }
+  .conversa-envio{ display: flex; gap: 8px; margin-bottom: 8px; }
+  #conversaTexto{
+    flex: 1; min-width: 0; padding: 10px; color: #fff; font: 16px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  #conversaEnviarBtn{
+    padding: 10px 14px; border: 2px solid #fff; border-radius: 12px; color: #fff; cursor: pointer;
+    background: linear-gradient(to bottom, #2ecc71, #1e8e4e); font: bold 15px 'Trebuchet MS', Arial, sans-serif;
+  }
   #amigoNome{
     flex: 1; min-width: 0; padding: 10px; color: #fff;
     font: 16px 'Trebuchet MS', Arial, sans-serif;
@@ -849,6 +888,19 @@
         <button type="button" data-aba="adicionar">Adicionar</button>
       </div>
       <div id="amigosMsg"></div>
+
+      <div id="abaConversa" hidden>
+        <div class="conversa-topo">
+          <button type="button" class="btn-mini" id="conversaVoltarBtn">‹ Voltar</button>
+          <b id="conversaNome"></b>
+        </div>
+        <div id="conversaLista" class="conversa-lista"></div>
+        <div class="conversa-envio">
+          <input id="conversaTexto" type="text" maxlength="200" placeholder="Escreve uma mensagem..." autocomplete="off">
+          <button type="button" id="conversaEnviarBtn">Enviar</button>
+        </div>
+        <p class="privada-nota">As mensagens ficam só neste aparelho e não são guardadas no servidor. Se o teu amigo estiver offline, não as recebe.</p>
+      </div>
 
       <div id="abaAmigos">
         <ul id="listaAmigos" class="lista-amigos"><li>Ainda não tens amigos.</li></ul>
@@ -1976,11 +2028,8 @@
             socket.emit('amigos:convidar', { ...credenciais(), amigoId: a.id, salaId: salaEsperaId });
           }));
         }
-        botoes.push(botaoMini('Remover', () => {
-          if (window.confirm('Remover ' + a.nome + ' dos amigos?')) {
-            socket.emit('amigos:remover', { ...credenciais(), outroId: a.id });
-          }
-        }));
+        botoes.push(botaoMensagem(a));
+        botoes.push(menuMais(a));
         lista.appendChild(linhaAmigo(
           a.nome,
           ESTADO_TXT[estado] + ' · ' + a.vitorias + ' vitórias · ' + a.moedas + ' moedas',
@@ -2008,14 +2057,205 @@
     });
 
     const n = l.recebidos.length;
-    ['amigosBadge', 'pedidosBadge'].forEach(id => {
+    const total = n + totalNovas();
+    [['amigosBadge', total], ['pedidosBadge', n]].forEach(([id, v]) => {
       const el = document.getElementById(id);
-      el.textContent = n;
-      el.hidden = n === 0;
+      el.textContent = v > 99 ? '99+' : v;
+      el.hidden = v === 0;
     });
   }
 
-  socket.on('amigos:lista', l => { amigosLista = l; renderAmigos(); });
+  /* ===== Mensagens entre amigos (só neste aparelho, sem base de dados) ===== */
+  const MAX_MSGS_AMIGO = 100;
+  let chats = {};              // { idDoAmigo: { msgs: [{ d: 'eu' | 'el', x, t, ok, erro }], novas } }
+  let chatsDono = null;        // conta a quem pertencem os chats carregados
+  let conversaAberta = null;   // id do amigo com a conversa aberta
+  const abasAmigos = ['abaAmigos', 'abaPedidos', 'abaAdicionar'];
+
+  function carregarChats() {
+    if (!sessao || chatsDono === sessao.id) return;
+    chatsDono = sessao.id;
+    try { chats = JSON.parse(localStorage.getItem('nante_chats_' + sessao.id)) || {}; } catch (e) { chats = {}; }
+  }
+  function guardarChats() {
+    if (!sessao) return;
+    try { localStorage.setItem('nante_chats_' + sessao.id, JSON.stringify(chats)); } catch (e) {}
+  }
+  function chatDe(id) {
+    carregarChats();
+    if (!chats[id]) chats[id] = { msgs: [], novas: 0 };
+    return chats[id];
+  }
+  function totalNovas() {
+    carregarChats();
+    return Object.values(chats).reduce((s, c) => s + (c.novas || 0), 0);
+  }
+  function limitarMsgs(c) {
+    if (c.msgs.length > MAX_MSGS_AMIGO) c.msgs.splice(0, c.msgs.length - MAX_MSGS_AMIGO);
+  }
+
+  function fecharMenus() {
+    document.querySelectorAll('.menu-lista').forEach(m => { m.hidden = true; });
+  }
+  document.addEventListener('click', fecharMenus);
+
+  // Botão 💬 (com bolinha de mensagens novas)
+  function botaoMensagem(a) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-mini btn-icone';
+    b.setAttribute('aria-label', 'Mensagens com ' + a.nome);
+    b.textContent = '💬';
+    const n = chatDe(a.id).novas;
+    if (n > 0) {
+      const i = document.createElement('i');
+      i.textContent = n > 9 ? '9+' : n;
+      b.appendChild(i);
+    }
+    b.addEventListener('click', () => abrirConversa(a));
+    return b;
+  }
+
+  // Botão ⋯ com "Limpar conversa" e "Remover"
+  function menuMais(a) {
+    const caixa = document.createElement('div');
+    caixa.className = 'menu-mais';
+    const abrir = document.createElement('button');
+    abrir.type = 'button';
+    abrir.className = 'btn-mini btn-icone';
+    abrir.setAttribute('aria-label', 'Mais opções');
+    abrir.textContent = '⋯';
+    const lista = document.createElement('div');
+    lista.className = 'menu-lista';
+    lista.hidden = true;
+    const limpar = botaoMini('Limpar conversa', () => {
+      lista.hidden = true;
+      if (window.confirm('Apagar as mensagens com ' + a.nome + ' neste aparelho?')) {
+        chats[a.id] = { msgs: [], novas: 0 };
+        guardarChats();
+        renderAmigos();
+      }
+    });
+    const remover = botaoMini('Remover', () => {
+      lista.hidden = true;
+      if (window.confirm('Remover ' + a.nome + ' dos amigos?')) {
+        socket.emit('amigos:remover', { ...credenciais(), outroId: a.id });
+      }
+    });
+    remover.classList.add('perigo');
+    lista.append(limpar, remover);
+    abrir.addEventListener('click', e => {
+      e.stopPropagation();
+      const abrirAgora = lista.hidden;
+      fecharMenus();
+      lista.hidden = !abrirAgora;
+    });
+    caixa.append(abrir, lista);
+    return caixa;
+  }
+
+  function desenharConversa() {
+    if (conversaAberta === null) return;
+    const lista = document.getElementById('conversaLista');
+    lista.innerHTML = '';
+    const c = chatDe(conversaAberta);
+    if (!c.msgs.length) {
+      const p = document.createElement('p');
+      p.className = 'conversa-vazia';
+      p.textContent = 'Ainda não há mensagens. Diz olá!';
+      lista.appendChild(p);
+      return;
+    }
+    c.msgs.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'balao ' + m.d + (m.ok === false ? ' falhou' : '');
+      d.appendChild(document.createTextNode(m.x));
+      const h = document.createElement('small');
+      h.textContent = new Date(m.t).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) +
+        (m.ok === false ? ' · não entregue' + (m.erro ? ' (' + m.erro + ')' : '') : '');
+      d.appendChild(h);
+      lista.appendChild(d);
+    });
+    lista.scrollTop = lista.scrollHeight;
+  }
+
+  function abrirConversa(a) {
+    conversaAberta = a.id;
+    chatDe(a.id).novas = 0;
+    guardarChats();
+    document.getElementById('amigosAbas').hidden = true;
+    abasAmigos.forEach(id => { document.getElementById(id).hidden = true; });
+    document.getElementById('abaConversa').hidden = false;
+    document.getElementById('conversaNome').textContent = a.nome;
+    desenharConversa();
+    renderAmigos();
+    document.getElementById('conversaTexto').focus();
+  }
+  function fecharConversa() {
+    conversaAberta = null;
+    document.getElementById('abaConversa').hidden = true;
+    document.getElementById('amigosAbas').hidden = false;
+    document.querySelectorAll('#amigosAbas button').forEach(x => x.classList.toggle('ativo', x.dataset.aba === 'amigos'));
+    abasAmigos.forEach(id => { document.getElementById(id).hidden = id !== 'abaAmigos'; });
+    renderAmigos();
+  }
+
+  function enviarMsgAmigo() {
+    const campo = document.getElementById('conversaTexto');
+    const x = campo.value.trim().slice(0, 200);
+    if (!x || !sessao || conversaAberta === null) return;
+    const para = conversaAberta;
+    const c = chatDe(para);
+    const m = { d: 'eu', x, t: Date.now(), ok: true };
+    c.msgs.push(m);
+    limitarMsgs(c);
+    campo.value = '';
+    desenharConversa();
+    guardarChats();
+    socket.timeout(5000).emit('amigos:msg', { ...credenciais(), paraId: para, texto: x }, (err, r) => {
+      if (err || !r || !r.ok) {
+        m.ok = false;
+        m.erro = err ? 'sem resposta do servidor' : (r && r.motivo) || '';
+        guardarChats();
+        if (conversaAberta === para) desenharConversa();
+      }
+    });
+  }
+  document.getElementById('conversaVoltarBtn').addEventListener('click', fecharConversa);
+  document.getElementById('conversaEnviarBtn').addEventListener('click', enviarMsgAmigo);
+  document.getElementById('conversaTexto').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); enviarMsgAmigo(); }
+  });
+
+  // Mensagem recebida de um amigo
+  socket.on('amigos:msg', ({ deId, nome: n, texto, t }) => {
+    if (!sessao || !amigosLista.amigos.some(a => a.id === deId)) return;   // só mensagens de amigos
+    const c = chatDe(deId);
+    c.msgs.push({ d: 'el', x: String(texto).slice(0, 200), t: t || Date.now() });
+    limitarMsgs(c);
+    const aVer = conversaAberta === deId && !amigosPainel.hidden && !lobby.classList.contains('escondido');
+    if (aVer) {
+      desenharConversa();
+    } else {
+      c.novas = (c.novas || 0) + 1;
+      mostrarAviso(n + ': ' + texto);
+    }
+    guardarChats();
+    renderAmigos();
+  });
+
+  socket.on('amigos:lista', l => {
+    amigosLista = l;
+    // sem amizade, sem conversa: apaga as mensagens de quem já não é amigo
+    carregarChats();
+    let mudou = false;
+    Object.keys(chats).forEach(id => {
+      if (!l.amigos.some(a => String(a.id) === id)) { delete chats[id]; mudou = true; }
+    });
+    if (mudou) guardarChats();
+    if (conversaAberta !== null && !l.amigos.some(a => a.id === conversaAberta)) fecharConversa();
+    renderAmigos();
+  });
   socket.on('amigos:presenca', ({ id, estado }) => {
     const a = amigosLista.amigos.find(x => x.id === id);
     if (a && a.estado !== estado) { a.estado = estado; renderAmigos(); }
@@ -2029,6 +2269,7 @@
   document.getElementById('abrirAmigosBtn').addEventListener('click', () => {
     amigosPainel.hidden = !amigosPainel.hidden;
     amigosMsg.textContent = '';
+    fecharConversa();
     if (!amigosPainel.hidden) {
       if (sessao) socket.emit('amigos:listar', credenciais());
       amigosPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
