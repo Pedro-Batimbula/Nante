@@ -393,7 +393,36 @@
   @keyframes saldoPulsa{ 50%{ transform: scale(1.25); } }
 
   /* Chat ao vivo (só aparece durante o jogo, junto com o saldo da arena) */
-  #saldoArena[hidden] ~ #chatBtn, #saldoArena[hidden] ~ #chatCaixa, #saldoArena[hidden] ~ #chatFlutua{ display: none; }
+  #saldoArena[hidden] ~ #chatBtn, #saldoArena[hidden] ~ #chatCaixa, #saldoArena[hidden] ~ #chatFlutua,
+  #saldoArena[hidden] ~ #chatHistBtn, #saldoArena[hidden] ~ #chatHist{ display: none; }
+  #chatHistBtn{
+    position: fixed; z-index: 110; width: 48px; height: 48px; border-radius: 50%;
+    right: calc(92px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    border: 3px solid #fff; background: rgba(0,0,0,.75); font-size: 22px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,.4); touch-action: manipulation;
+  }
+  #chatBadge{
+    position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; background: #e74c3c; color: #fff; text-align: center;
+    font: bold 12px/20px 'Trebuchet MS', Arial, sans-serif; font-style: normal;
+  }
+  #chatHist{
+    position: fixed; z-index: 115; display: flex; flex-direction: column;
+    top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px));
+    width: min(290px, calc(100vw - 16px)); max-height: min(50vh, 340px);
+    border-radius: 14px; background: rgba(0,0,0,.88); border: 2px solid rgba(255,255,255,.5);
+    box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+  .chat-hist-topo{
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 10px;
+    color: #fff; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,.2);
+  }
+  .chat-hist-topo button{ border: 0; background: none; color: #fff; font-size: 18px; padding: 0 4px; cursor: pointer; }
+  #chatHistLista{ overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; }
+  .chat-hist-item{ color: #fff; font: 14px 'Trebuchet MS', Arial, sans-serif; word-break: break-word; }
+  .chat-hist-item b{ color: #ffd400; margin-right: 6px; }
+  .chat-hist-item small{ margin-left: 6px; font-size: 11px; color: rgba(255,255,255,.45); }
+  .chat-hist-vazio{ margin: 0; text-align: center; font-size: 13px; color: rgba(255,255,255,.6); }
   #chatBtn{
     position: fixed; z-index: 110; width: 48px; height: 48px; border-radius: 50%;
     right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px));
@@ -653,6 +682,14 @@
   <button type="button" id="chatEnviarBtn">Enviar</button>
 </div>
 <div id="chatFlutua"></div>
+<button type="button" id="chatHistBtn" aria-label="Mensagens do jogo">📜<i id="chatBadge" hidden>0</i></button>
+<div id="chatHist" hidden>
+  <div class="chat-hist-topo">
+    <b>Mensagens do jogo</b>
+    <button type="button" id="chatHistFechar" aria-label="Fechar">✕</button>
+  </div>
+  <div id="chatHistLista"><p class="chat-hist-vazio">Ainda ninguém escreveu.</p></div>
+</div>
 
 <div id="dados">
   <div class="dado" id="dado1"></div>
@@ -1852,7 +1889,46 @@
     });
   }
 
-  /* ===== Chat ao vivo (não guarda nada) ===== */
+  /* ===== Chat ao vivo: mensagens flutuantes + histórico do jogo (só em memória) ===== */
+  const chatHist = document.getElementById('chatHist');
+  const chatHistLista = document.getElementById('chatHistLista');
+  const chatBadge = document.getElementById('chatBadge');
+  let naoLidas = 0;
+  function limparHistorico() {
+    chatHistLista.innerHTML = '<p class="chat-hist-vazio">Ainda ninguém escreveu.</p>';
+    naoLidas = 0;
+    chatBadge.hidden = true;
+    document.getElementById('chatFlutua').innerHTML = '';
+  }
+  function guardarNoHistorico(n, texto) {
+    const vazio = chatHistLista.querySelector('.chat-hist-vazio');
+    if (vazio) vazio.remove();
+    const item = document.createElement('div');
+    item.className = 'chat-hist-item';
+    const b = document.createElement('b');
+    b.textContent = n;
+    const hora = document.createElement('small');
+    hora.textContent = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+    item.append(b, document.createTextNode(texto), hora);
+    chatHistLista.appendChild(item);
+    while (chatHistLista.children.length > 100) chatHistLista.firstChild.remove();
+    if (chatHist.hidden) {
+      naoLidas++;
+      chatBadge.textContent = naoLidas > 99 ? '99+' : naoLidas;
+      chatBadge.hidden = false;
+    } else {
+      chatHistLista.scrollTop = chatHistLista.scrollHeight;
+    }
+  }
+  document.getElementById('chatHistBtn').addEventListener('click', () => {
+    chatHist.hidden = !chatHist.hidden;
+    if (!chatHist.hidden) {
+      naoLidas = 0;
+      chatBadge.hidden = true;
+      chatHistLista.scrollTop = chatHistLista.scrollHeight;
+    }
+  });
+  document.getElementById('chatHistFechar').addEventListener('click', () => { chatHist.hidden = true; });
   const chatCaixa = document.getElementById('chatCaixa');
   const chatTexto = document.getElementById('chatTexto');
   const chatFlutua = document.getElementById('chatFlutua');
@@ -1878,9 +1954,11 @@
     b.textContent = n;
     d.append(b, document.createTextNode(texto));
     chatFlutua.appendChild(d);
+    guardarNoHistorico(n, texto);
     while (chatFlutua.children.length > 5) chatFlutua.firstChild.remove();
-    setTimeout(() => d.classList.add('sai'), 5000);
-    setTimeout(() => d.remove(), 5900);
+    const tempo = Math.min(20000, 8000 + texto.length * 150);   // mensagens longas ficam mais tempo
+    setTimeout(() => d.classList.add('sai'), tempo);
+    setTimeout(() => d.remove(), tempo + 900);
   });
 
   function alternarPerfil() {
@@ -1965,6 +2043,8 @@
     limparSelecao();
     jogoIniciado = true;
     document.getElementById('saldoArena').hidden = false;
+    limparHistorico();
+    chatHist.hidden = true;
     esperaCaixa.hidden = true;
     fecharPrestes();
     document.getElementById('esperaMsg').textContent = '';
