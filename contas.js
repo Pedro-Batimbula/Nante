@@ -237,6 +237,23 @@ async function registarResultado(id, venceu) {
   }
 }
 
+// ===== Diagnóstico da ligação à base de dados (temporário) =====
+async function diagnostico() {
+  const r = { temDatabaseUrl: !!process.env.DATABASE_URL, modo: pool ? 'neon' : 'memoria', pronto };
+  if (process.env.DATABASE_URL) {
+    try { r.host = new URL(process.env.DATABASE_URL).hostname; }
+    catch (e) { r.urlInvalida = true; }
+  }
+  if (pool) {
+    try {
+      const q = await pool.query('SELECT current_database() AS bd, (SELECT COUNT(*)::int FROM nante_contas) AS contas');
+      r.baseDeDados = q.rows[0].bd;
+      r.totalContas = q.rows[0].contas;
+    } catch (e) { r.erroConsulta = e.message; }
+  }
+  return r;
+}
+
 // ===== Amigos (só com base de dados) =====
 const SEM_BD = { erro: 'Os amigos precisam da base de dados.' };
 const PREMIO_CONVITE = 50, MAX_CONVITES_PAGOS = 20;
@@ -406,7 +423,7 @@ async function amizadePorLink(novoId, anfitriaoId) {
 }
 
 module.exports = {
+  diagnostico,
   iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado,
   pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink, procurarJogadores
 };
-
