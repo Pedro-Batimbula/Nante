@@ -123,6 +123,7 @@ function criarEstadoInicial(totalPlayers, totalPecas) {
     destinosPorPeca: {},
     dadosDisponiveis: [],
     bonusesCaptura: [],
+    matadas: [],
     bonusRolagem: false,
     quantidadeBase: QUANTIDADE_DADOS_BASE,
     quantidadeProximaRolagem: QUANTIDADE_DADOS_BASE,
@@ -187,9 +188,13 @@ function moverOcupacao(estado, pecaId, destinoId) {
   estado.pecaLocalizacao[pecaId] = destinoId;
 }
 
-function capturarPeca(estado, pecaId) {
+function capturarPeca(estado, pecaId, matador) {
+  const casaDaMatada = estado.pecaLocalizacao[pecaId];
   moverOcupacao(estado, pecaId, 'ninho-' + jogadorDaPeca(pecaId));
   estado.pecaIndiceNoPercurso[pecaId] = -1;
+  if (matador !== undefined && matador !== jogadorDaPeca(pecaId)) {
+    (estado.matadas = estado.matadas || []).push({ matador, vitima: jogadorDaPeca(pecaId), casa: casaDaMatada });
+  }
 }
 
 function marcarViolacoesAoLongoDoCaminho(estado, percursoDaPeca, jogadorDono, indiceInicio, indiceFim) {
@@ -208,11 +213,11 @@ function esmagarNaEntrada(estado, casaEntradaId, jogadorDono, entrandoEmDupla) {
   const alheias = ocupantesAntes.filter(id => jogadorDaPeca(id) !== jogadorDono);
 
   if (entrandoEmDupla) {
-    alheias.forEach(id => capturarPeca(estado, id));
+    alheias.forEach(id => capturarPeca(estado, id, jogadorDono));
     return;
   }
   if (ocupantesAntes.length < 2) return;
-  if (alheias.length > 0) capturarPeca(estado, alheias[0]);
+  if (alheias.length > 0) capturarPeca(estado, alheias[0], jogadorDono);
 }
 
 // ===== Fim de jogo / abandono =====
@@ -269,7 +274,7 @@ function moverPecaComRegras(estado, pecaId, destinoId, indiceDestino) {
       const eMuroAdversario = mesmoJogadorQueOcupantes && jogadorOcupante0 !== jogadorDaPeca(pecaId);
 
       if (eMuroAdversario && !ehCasaSegura(destinoId)) {
-        ocupantes.forEach(id => capturarPeca(estado, id));
+        ocupantes.forEach(id => capturarPeca(estado, id, jogadorDaPeca(pecaId)));
         capturasNesteMovimento = ocupantes.length;
       } else {
         return { sucesso: false, motivo: 'Essa casa já está cheia!' };
@@ -277,7 +282,7 @@ function moverPecaComRegras(estado, pecaId, destinoId, indiceDestino) {
     } else if (!ehCasaSegura(destinoId) && ocupantes.length === 1) {
       const pecaOcupante = ocupantes[0];
       if (jogadorDaPeca(pecaOcupante) !== jogadorDaPeca(pecaId)) {
-        capturarPeca(estado, pecaOcupante);
+        capturarPeca(estado, pecaOcupante, jogadorDaPeca(pecaId));
         capturasNesteMovimento = 1;
       }
     }
