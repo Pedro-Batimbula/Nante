@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Nante",
+  "short_name": "Nante",
+  "description": "Jogo de tabuleiro online para 2 a 4 jogadores. Rola os dados, captura e chega ao centro.",
+  "lang": "pt",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0a3d0a",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

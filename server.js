@@ -15,7 +15,16 @@ require('./admin')(app);   // ADMIN
 // CONTAS: criar conta (só nome) e validar a sessão guardada no aparelho
 app.use(express.json());
 app.post('/conta/criar', async (req, res) => {
-  const r = await contas.criar(req.body && req.body.nome);
+  const r = await contas.criar(req.body && req.body.nome, req.body && req.body.senha);
+  if (!r.erro && req.body && req.body.convite) {
+    const b = await contas.amizadePorLink(r.id, req.body.convite);
+    if (b) {
+      const sala = 'conta-' + b.anfitriao.id;
+      if (b.moedas !== undefined) io.to(sala).emit('moedas:saldo', { moedas: b.moedas, delta: b.premio, motivo: 'convite_amigo' });
+      io.to(sala).emit('amigos:aviso', { texto: r.nome + ' entrou pelo teu link e já é teu amigo!' });
+      sincronizarAmizade(b.anfitriao.id, r.id);
+    }
+  }
   res.status(r.erro ? 400 : 200).json(r);
 });
 app.post('/conta/validar', async (req, res) => {
@@ -28,6 +37,7 @@ app.post('/conta/senha', async (req, res) => {
   const r = await contas.definirSenha(b.id, b.token, b.senha);
   res.status(r.erro ? (r.status || 400) : 200).json(r);
 });
+app.get('/diagnostico', async (req, res) => res.json(await contas.diagnostico()));
 app.post('/conta/entrar', async (req, res) => {
   const b = req.body || {};
   const r = await contas.entrar(b.nome, b.senha);
@@ -315,6 +325,53 @@ function pagarMatadas(sala) {
   });
 }
 
+// ===== Amigos: presença online, listas e avisos =====
+const amigosDe = new Map();       // conta -> ids dos amigos (só de quem está online)
+const ultimoEstado = new Map();   // conta -> último estado avisado aos amigos
+
+// 'offline' | 'online' (livre) | 'mesa' (à espera numa mesa) | 'jogo'
+function estadoDeConta(id) {
+  const r = io.sockets.adapter.rooms.get('conta-' + id);
+  if (!r || !r.size) return 'offline';
+  const s = Object.values(salas).find(x => x.jogadores.some(j => j.contaId === id && !j.desconectado));
+  return s ? (s.iniciado ? 'jogo' : 'mesa') : 'online';
+}
+async function carregarAmigos(id) {
+  amigosDe.set(id, new Set(await contas.idsDosAmigos(id)));
+}
+function avisarPresenca(id) {
+  const estado = estadoDeConta(id);
+  ultimoEstado.set(id, estado);
+  (amigosDe.get(id) || []).forEach(a => io.to('conta-' + a).emit('amigos:presenca', { id, estado }));
+}
+async function enviarLista(id) {
+  if (estadoDeConta(id) === 'offline') return;
+  const l = await contas.listarAmigos(id);
+  l.amigos.forEach(a => { a.estado = estadoDeConta(a.id); });
+  io.to('conta-' + id).emit('amigos:lista', l);
+}
+// Depois de uma mudança entre dois jogadores: atualiza as listas dos dois
+async function sincronizarAmizade(a, b) {
+  for (const id of [a, b]) {
+    if (amigosDe.has(id)) await carregarAmigos(id);
+    enviarLista(id);
+    avisarPresenca(id);
+  }
+}
+async function contaDe(socket, dados) {
+  const c = await contas.validar(dados && dados.id, dados && dados.token);
+  if (!c) { socket.emit('conta:invalida'); return null; }
+  return c;
+}
+// A cada 3 s vê quem mudou de estado (entrou numa mesa, começou a jogar, saiu...) e avisa os amigos
+setInterval(() => {
+  for (const id of [...amigosDe.keys()]) {
+    const e = estadoDeConta(id);
+    if (e !== ultimoEstado.get(id)) avisarPresenca(id);
+    if (e === 'offline') { amigosDe.delete(id); ultimoEstado.delete(id); }
+  }
+}, 3000);
+
 // ===== Apostas e prémios =====
 const APOSTA_MIN = 10, APOSTA_MAX = 10000, BONUS_VITORIA = 200;
 
@@ -561,6 +618,78 @@ io.on('connection', (socket) => {
     if (sala.jogadores.every(j => sala.respostas[j.socketId] === 'participar')) resolverConfirmacao(sala);
   });
 
+  // ===== AMIGOS =====
+  socket.on('amigos:ligar', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    socket.data.contaId = conta.id;
+    socket.join('conta-' + conta.id);
+    await carregarAmigos(conta.id);
+    avisarPresenca(conta.id);
+    enviarLista(conta.id);
+  });
+  socket.on('amigos:procurar', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const r = await contas.procurarJogadores(conta.id, d.termo);
+    if (r.erro) { socket.emit('amigos:aviso', { erro: true, texto: r.erro }); return; }
+    socket.emit('amigos:resultados', { termo: String(d.termo || ''), lista: r.lista });
+  });
+  socket.on('amigos:listar', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (conta) enviarLista(conta.id);
+  });
+  socket.on('amigos:pedir', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const r = await contas.pedirAmizade(conta.id, d.nome);
+    if (r.erro) { socket.emit('amigos:aviso', { erro: true, texto: r.erro }); return; }
+    socket.emit('amigos:aviso', { texto: r.aceite ? 'Agora és amigo de ' + r.alvo.nome + '!' : 'Pedido enviado a ' + r.alvo.nome + '.' });
+    io.to('conta-' + r.alvo.id).emit('amigos:aviso', { texto: r.aceite ? conta.nome + ' aceitou ser teu amigo!' : conta.nome + ' quer ser teu amigo.' });
+    await sincronizarAmizade(conta.id, r.alvo.id);
+  });
+  socket.on('amigos:responder', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const r = await contas.responderPedido(conta.id, d.pedidoId, !!d.aceitar);
+    if (r.erro) { socket.emit('amigos:aviso', { erro: true, texto: r.erro }); enviarLista(conta.id); return; }
+    if (r.aceite) io.to('conta-' + r.outro.id).emit('amigos:aviso', { texto: conta.nome + ' aceitou o teu pedido!' });
+    await sincronizarAmizade(conta.id, r.outro.id);
+  });
+  // serve para remover um amigo e para cancelar um pedido que enviei
+  socket.on('amigos:remover', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const r = await contas.removerAmizade(conta.id, d.outroId);
+    if (r.erro) { socket.emit('amigos:aviso', { erro: true, texto: r.erro }); return; }
+    await sincronizarAmizade(conta.id, Number(d.outroId));
+  });
+  // Convidar um amigo online e livre para a minha mesa privada (o convite vale 60 s)
+  socket.on('amigos:convidar', async (d) => {
+    const conta = await contaDe(socket, d);
+    if (!conta) return;
+    const falha = t => socket.emit('amigos:aviso', { erro: true, texto: t });
+    const amigoId = Number(d.amigoId);
+    const sala = salas[d.salaId];
+    if (!sala || !sala.privada || !sala.jogadores.some(j => j.contaId === conta.id && !j.desconectado)) {
+      return falha('Só podes convidar para uma mesa privada em que estás.');
+    }
+    if (sala.iniciado || sala.confirmando) return falha('A mesa já está a começar.');
+    if (sala.jogadores.length >= sala.totalPlayers) return falha('A mesa já está cheia.');
+    const meus = await contas.idsDosAmigos(conta.id);
+    if (!meus.includes(amigoId)) return falha('Essa pessoa não é tua amiga.');
+    const estado = estadoDeConta(amigoId);
+    if (estado === 'offline') return falha('O teu amigo não está online.');
+    if (estado !== 'online') return falha('O teu amigo já está numa mesa ou em jogo.');
+    sala.convites = sala.convites || {};
+    if (Date.now() - (sala.convites[amigoId] || 0) < 60000) return falha('Já o convidaste há pouco. Espera um minuto.');
+    sala.convites[amigoId] = Date.now();
+    io.to('conta-' + amigoId).emit('amigos:convite', {
+      de: conta.nome, codigo: sala.codigo, aposta: sala.aposta || 0, totalPlayers: sala.totalPlayers, segundos: 60
+    });
+    socket.emit('amigos:aviso', { texto: 'Convite enviado.' });
+  });
+
   // PERFIL: o cliente pede as suas moedas e estatísticas
   socket.on('perfil:pedir', async ({ id, token }) => {
     const conta = await contas.validar(id, token);
@@ -574,6 +703,30 @@ io.on('connection', (socket) => {
       percentagem: conta.jogos ? Math.round(conta.vitorias * 100 / conta.jogos) : 0
     });
   });
+  // Mensagem privada entre amigos: passa em tempo real e não é guardada em lado nenhum
+  socket.on('amigos:msg', async ({ id, token, paraId, texto }, ack) => {
+    const responder = r => { if (typeof ack === 'function') ack(r); };
+    const conta = await contas.validar(id, token);
+    if (!conta) { socket.emit('conta:invalida'); return responder({ ok: false, motivo: 'Sessão inválida.' }); }
+    socket.data.contaId = conta.id;
+    const t = String(texto || '').trim().slice(0, 200);
+    const para = Number(paraId);
+    if (!t || !Number.isInteger(para) || para === conta.id) return responder({ ok: false, motivo: 'Mensagem inválida.' });
+    const agora = Date.now();
+    if (socket.data.ultimaMsgAmigo && agora - socket.data.ultimaMsgAmigo < 800) {
+      return responder({ ok: false, motivo: 'Mais devagar...' });
+    }
+    socket.data.ultimaMsgAmigo = agora;
+    let entregue = false;
+    io.sockets.sockets.forEach(s => {
+      if (s.data.contaId === para) {
+        s.emit('amigos:msg', { deId: conta.id, nome: conta.nome, texto: t, t: agora });
+        entregue = true;
+      }
+    });
+    responder(entregue ? { ok: true } : { ok: false, motivo: 'O teu amigo está offline.' });
+  });
+
   // Sair de uma sala que ainda não começou (volta ao início)
   socket.on('lobby:sair', () => {
     const sala = salas[socket.data.salaId];
