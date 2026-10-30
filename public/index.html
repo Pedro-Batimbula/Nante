@@ -706,7 +706,7 @@
     <div class="conta-caixa">
       <label for="contaNome">Como te chamas?</label>
       <input id="contaNome" type="text" maxlength="20" placeholder="O teu nome" autocomplete="off">
-      <input id="contaSenha" type="password" placeholder="Palavra-passe" autocomplete="current-password" hidden>
+      <input id="contaSenha" type="password" placeholder="Cria uma palavra-passe (mín. 6)" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false">
       <button id="contaEntrarBtn" type="button">Começar</button>
       <div id="contaErro"></div>
       <button id="contaModoBtn" type="button">Já tenho conta</button>
@@ -1454,7 +1454,8 @@
   let modoEntrar = false;
   contaModoBtn.addEventListener('click', () => {
     modoEntrar = !modoEntrar;
-    contaSenha.hidden = !modoEntrar;
+    contaSenha.placeholder = modoEntrar ? 'Palavra-passe' : 'Cria uma palavra-passe (mín. 6)';
+    contaSenha.autocomplete = modoEntrar ? 'current-password' : 'new-password';
     contaSenha.value = '';
     contaErro.textContent = '';
     document.getElementById('contaEntrarBtn').textContent = modoEntrar ? 'Entrar' : 'Começar';
@@ -1468,17 +1469,18 @@
     const btn = document.getElementById('contaEntrarBtn');
     const n = contaNome.value.trim();
     if (n.length < 2) { contaErro.textContent = 'Escreve um nome com pelo menos 2 letras.'; return; }
-    if (modoEntrar && !contaSenha.value) { contaErro.textContent = 'Escreve a palavra-passe.'; return; }
+    if (!contaSenha.value) { contaErro.textContent = modoEntrar ? 'Escreve a palavra-passe.' : 'Escolhe uma palavra-passe.'; return; }
+    if (!modoEntrar && contaSenha.value.length < 6) { contaErro.textContent = 'A palavra-passe deve ter pelo menos 6 caracteres.'; return; }
     btn.disabled = true;
     contaErro.textContent = modoEntrar ? 'A entrar...' : 'A criar a conta...';
     try {
       const r = await fetch(modoEntrar ? '/conta/entrar' : '/conta/criar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modoEntrar ? { nome: n, senha: contaSenha.value } : { nome: n })
+        body: JSON.stringify({ nome: n, senha: contaSenha.value })
       });
       const d = await r.json();
       if (!r.ok || d.erro) { contaErro.textContent = d.erro || 'Não foi possível criar a conta.'; return; }
-      sessao = { id: d.id, nome: d.nome, token: d.token, temSenha: modoEntrar };
+      sessao = { id: d.id, nome: d.nome, token: d.token, temSenha: true };
       contaSenha.value = '';
       try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao)); } catch (e) {}
       contaErro.textContent = '';
