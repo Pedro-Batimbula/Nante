@@ -703,6 +703,30 @@ io.on('connection', (socket) => {
       percentagem: conta.jogos ? Math.round(conta.vitorias * 100 / conta.jogos) : 0
     });
   });
+  // Mensagem privada entre amigos: passa em tempo real e não é guardada em lado nenhum
+  socket.on('amigos:msg', async ({ id, token, paraId, texto }, ack) => {
+    const responder = r => { if (typeof ack === 'function') ack(r); };
+    const conta = await contas.validar(id, token);
+    if (!conta) { socket.emit('conta:invalida'); return responder({ ok: false, motivo: 'Sessão inválida.' }); }
+    socket.data.contaId = conta.id;
+    const t = String(texto || '').trim().slice(0, 200);
+    const para = Number(paraId);
+    if (!t || !Number.isInteger(para) || para === conta.id) return responder({ ok: false, motivo: 'Mensagem inválida.' });
+    const agora = Date.now();
+    if (socket.data.ultimaMsgAmigo && agora - socket.data.ultimaMsgAmigo < 800) {
+      return responder({ ok: false, motivo: 'Mais devagar...' });
+    }
+    socket.data.ultimaMsgAmigo = agora;
+    let entregue = false;
+    io.sockets.sockets.forEach(s => {
+      if (s.data.contaId === para) {
+        s.emit('amigos:msg', { deId: conta.id, nome: conta.nome, texto: t, t: agora });
+        entregue = true;
+      }
+    });
+    responder(entregue ? { ok: true } : { ok: false, motivo: 'O teu amigo está offline.' });
+  });
+
   // Sair de uma sala que ainda não começou (volta ao início)
   socket.on('lobby:sair', () => {
     const sala = salas[socket.data.salaId];
