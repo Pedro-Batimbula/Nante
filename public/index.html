@@ -872,7 +872,8 @@
             <input id="amigoNome" type="text" maxlength="20" placeholder="Nome do jogador" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
             <button type="button" id="amigoPedirBtn">Enviar</button>
           </div>
-          <p class="privada-nota">Escreve o nome exato do jogador.</p>
+          <p class="privada-nota">Escreve pelo menos 2 letras do nome para procurar.</p>
+          <ul id="resultadosAmigos" class="lista-amigos"></ul>
         </div>
         <div class="privada-bloco">
           <b>Link de convite</b>
@@ -2051,6 +2052,47 @@
   }
   document.getElementById('amigoPedirBtn').addEventListener('click', pedirAmigo);
   document.getElementById('amigoNome').addEventListener('keydown', e => { if (e.key === 'Enter') pedirAmigo(); });
+
+  // Pesquisa enquanto escreves (espera 300 ms depois da última tecla)
+  let timerProcura = null, timerSemResposta = null;
+  document.getElementById('amigoNome').addEventListener('input', e => {
+    clearTimeout(timerProcura);
+    clearTimeout(timerSemResposta);
+    const t = e.target.value.trim();
+    const ul = document.getElementById('resultadosAmigos');
+    if (t.length < 2) { ul.innerHTML = ''; return; }
+    if (!sessao || !socket.connected) { ul.innerHTML = '<li>Sem ligação ao servidor.</li>'; return; }
+    ul.innerHTML = '<li>A procurar...</li>';
+    timerProcura = setTimeout(() => socket.emit('amigos:procurar', { ...credenciais(), termo: t }), 300);
+    timerSemResposta = setTimeout(() => {
+      if (ul.firstChild && ul.firstChild.textContent === 'A procurar...') {
+        ul.innerHTML = '<li>O servidor não respondeu. Confirma que o server.js novo está a correr.</li>';
+      }
+    }, 4000);
+  });
+  socket.on('amigos:resultados', ({ termo, lista }) => {
+    clearTimeout(timerSemResposta);
+    if (termo !== document.getElementById('amigoNome').value.trim()) return;   // resposta antiga
+    const ul = document.getElementById('resultadosAmigos');
+    ul.innerHTML = '';
+    if (!lista.length) {
+      const li = document.createElement('li');
+      li.textContent = 'Nenhum jogador encontrado.';
+      ul.appendChild(li);
+      return;
+    }
+    lista.forEach(j => {
+      const botoes = [];
+      if (!j.rel) {
+        botoes.push(botaoMini('Adicionar', () => {
+          socket.emit('amigos:pedir', { ...credenciais(), nome: j.nome });
+          setTimeout(() => socket.emit('amigos:procurar', { ...credenciais(), termo }), 400);
+        }));
+      }
+      const sub = j.rel === 'aceite' ? 'Já é teu amigo' : j.rel === 'pendente' ? 'Pedido pendente' : j.vitorias + ' vitórias';
+      ul.appendChild(linhaAmigo(j.nome, sub, null, botoes));
+    });
+  });
   document.getElementById('amigoLinkBtn').addEventListener('click', e => {
     if (sessao) copiar(location.origin + '/?amigo=' + sessao.id, e.currentTarget);
   });
