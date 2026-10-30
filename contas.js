@@ -48,28 +48,34 @@ async function iniciar() {
   console.log('Contas: ' + (pool ? 'tabela "jogadores" pronta no Neon.' : 'sem DATABASE_URL, só em memória.'));
 }
 
-async function criar(nomeBruto) {
+async function criar(nomeBruto, senha) {
   if (!pronto) return { erro: 'Contas indisponíveis de momento.' };
   const nome = limparNome(nomeBruto);
   if (nome.length < 2 || nome.length > 20) return { erro: 'O nome deve ter entre 2 e 20 letras.' };
   const minusculas = nome.toLowerCase();
+  let senhaGuardada = null;
+  if (senha) {
+    if (String(senha).length < 6) return { erro: 'A palavra-passe deve ter pelo menos 6 caracteres.' };
+    const sal = crypto.randomBytes(16).toString('hex');
+    senhaGuardada = sal + ':' + await hashSenha(senha, sal);
+  }
   const token = crypto.randomBytes(24).toString('hex');
   const tokenHash = hash(token);
   try {
     if (pool) {
       const r = await pool.query(
-        'INSERT INTO nante_contas (nome, nome_minusculas, token_hash) VALUES ($1, $2, $3) RETURNING id',
-        [nome, minusculas, tokenHash]
+        'INSERT INTO nante_contas (nome, nome_minusculas, token_hash, senha_hash) VALUES ($1, $2, $3, $4) RETURNING id',
+        [nome, minusculas, tokenHash, senhaGuardada]
       );
       await pool.query(
         "INSERT INTO moedas_movimentos (jogador_id, valor, motivo) VALUES ($1, 100, 'bonus_inicial')",
         [r.rows[0].id]
       );
-      return { id: r.rows[0].id, nome, token };
+      return { id: r.rows[0].id, nome, token, temSenha: !!senhaGuardada };
     }
     if (memoria.some(j => j.minusculas === minusculas)) return { erro: 'Esse nome já está em uso.' };
     const id = memoria.length + 1;
-    memoria.push({ id, nome, minusculas, token_hash: tokenHash, moedas: 100, vitorias: 0, jogos: 0 });
+    memoria.push({ id, nome, minusculas, token_hash: tokenHash, senha_hash: senhaGuardada, moedas: 100, vitorias: 0, jogos: 0 });
     return { id, nome, token };
   } catch (e) {
     if (e.code === '23505') return { erro: 'Esse nome já está em uso.' };   // nome repetido
@@ -150,7 +156,10 @@ async function entrar(nomeBruto, senha) {
     } else {
       linha = memoria.find(j => j.minusculas === minusculas);
     }
-    if (!linha || !linha.senha_hash) return errado();
+    if (!linha) return errado();
+    if (!linha.senha_hash) {
+      return { erro: 'Esta conta ainda não tem palavra-passe. Abre-a no aparelho onde a criaste e usa "Proteger conta".' };
+    }
     const [sal, esperado] = linha.senha_hash.split(':');
     const a = Buffer.from(await hashSenha(senha, sal), 'hex');
     const b = Buffer.from(esperado, 'hex');
