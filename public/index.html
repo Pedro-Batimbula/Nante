@@ -546,6 +546,30 @@
   .chat-msg.sai{ opacity: 0; transform: translateY(-24px); transition: opacity .8s, transform .8s; }
   @keyframes chatSobe{ from{ opacity: 0; transform: translateY(24px); } to{ opacity: 1; transform: translateY(0); } }
 
+  /* Voz ao vivo (premir para falar) */
+  .voz-btn{
+    position: fixed; z-index: 110; width: 42px; height: 42px; border-radius: 50%; padding: 0;
+    bottom: calc(115px + env(safe-area-inset-bottom, 0px));
+    display: grid; place-items: center; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,.7); background: rgba(0,0,0,.55);
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .voz-btn svg{ width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .voz-btn[hidden]{ display: none; }
+  #saldoArena[hidden] ~ .voz-btn{ display: none; }
+  #vozOpcaoBtn{ right: calc(150px + env(safe-area-inset-right, 0px)); }
+  #vozBtn{ right: calc(204px + env(safe-area-inset-right, 0px)); }
+  #vozOpcaoBtn:not(.off) .corte{ display: none; }
+  #vozOpcaoBtn.off{ opacity: .6; }
+  #vozBtn.gravando{ background: rgba(231,76,60,.85); border-color: #fff; animation: vozPulsa 1s infinite; }
+  @keyframes vozPulsa{ 50%{ transform: scale(1.12); } }
+  #chatBtn, #chatHistBtn{
+    width: 42px; height: 42px; padding: 0; display: grid; place-items: center;
+    bottom: calc(115px + env(safe-area-inset-bottom, 0px));
+    border: 1.5px solid rgba(255,255,255,.7); background: rgba(0,0,0,.55); box-shadow: none;
+  }
+  #chatBtn svg, #chatHistBtn svg{ width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+
   /* Aviso de moedas (aparece por cima de tudo, também durante o jogo) */
   #toastMoedas[hidden], #fimJogo[hidden]{ display: none; }
   #toastMoedas{
@@ -763,13 +787,19 @@
 
 <div id="vez"></div>
 <div id="saldoArena" hidden><svg class="moeda"><use href="#moeda"/></svg><b id="saldoArenaValor">0</b></div>
-<button type="button" id="chatBtn" aria-label="Chat">💬</button>
+<button type="button" id="chatBtn" aria-label="Chat"><svg viewBox="0 0 24 24"><path d="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9.5L5 20v-4a1 1 0 0 1-1-1z"/></svg></button>
 <div id="chatCaixa" hidden>
   <textarea id="chatTexto" maxlength="80" placeholder="Escreve uma mensagem..."></textarea>
   <button type="button" id="chatEnviarBtn">Enviar</button>
 </div>
 <div id="chatFlutua"></div>
-<button type="button" id="chatHistBtn" aria-label="Mensagens do jogo">📜<i id="chatBadge" hidden>0</i></button>
+<button type="button" id="vozOpcaoBtn" class="voz-btn" aria-label="Ligar ou desligar a voz">
+  <svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/><path class="corte" d="M4 4l16 16"/></svg>
+</button>
+<button type="button" id="vozBtn" class="voz-btn" aria-label="Premir para falar">
+  <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+</button>
+<button type="button" id="chatHistBtn" aria-label="Mensagens do jogo"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg><i id="chatBadge" hidden>0</i></button>
 <div id="chatHist" hidden>
   <div class="chat-hist-topo">
     <b>Mensagens do jogo</b>
@@ -2423,6 +2453,8 @@
     naoLidas = 0;
     chatBadge.hidden = true;
     document.getElementById('chatFlutua').innerHTML = '';
+    filaVoz.length = 0;
+    pararGravacao(true);
   }
   function guardarNoHistorico(n, texto) {
     const vazio = chatHistLista.querySelector('.chat-hist-vazio');
@@ -2484,6 +2516,107 @@
     setTimeout(() => d.classList.add('sai'), tempo);
     setTimeout(() => d.remove(), tempo + 900);
   });
+
+  /* ===== Voz ao vivo: premir para falar. Nada é guardado: o áudio passa, toca e é libertado ===== */
+  const vozBtn = document.getElementById('vozBtn');
+  const vozOpcaoBtn = document.getElementById('vozOpcaoBtn');
+  const MAX_GRAVACAO_MS = 8000;
+  let vozLigada = true;
+  let premido = false, gravador = null, gravStream = null, gravPedacos = [];
+  let gravTimer = null, gravCancelada = false, gravInicio = 0;
+  const filaVoz = [];
+  let aTocar = false;
+
+  function avisoVoz(texto) {
+    const d = document.createElement('div');
+    d.className = 'chat-msg';
+    d.textContent = texto;
+    chatFlutua.appendChild(d);
+    setTimeout(() => d.remove(), 3000);
+  }
+  function aplicarVoz() {
+    vozBtn.hidden = !vozLigada;
+    vozOpcaoBtn.classList.toggle('off', !vozLigada);
+    if (!vozLigada) { pararGravacao(true); filaVoz.length = 0; }
+  }
+  vozOpcaoBtn.addEventListener('click', () => { vozLigada = !vozLigada; aplicarVoz(); });
+
+  async function comecarGravacao() {
+    if (!vozLigada || gravador || meuIndice === null) return;
+    premido = true;
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { premido = false; avisoVoz('Sem acesso ao microfone.'); return; }
+    if (!premido) { stream.getTracks().forEach(t => t.stop()); return; }   // largou o botão antes de abrir
+    let rec;
+    try { rec = new MediaRecorder(stream); }
+    catch (e) { stream.getTracks().forEach(t => t.stop()); premido = false; avisoVoz('Este aparelho não grava áudio.'); return; }
+    gravStream = stream;
+    gravador = rec;
+    gravPedacos = [];
+    gravCancelada = false;
+    gravInicio = Date.now();
+    rec.ondataavailable = e => { if (e.data && e.data.size) gravPedacos.push(e.data); };
+    rec.onstop = async () => {
+      const tipo = rec.mimeType || 'audio/webm';
+      const blob = new Blob(gravPedacos, { type: tipo });
+      const curto = Date.now() - gravInicio < 400;
+      gravPedacos = [];
+      if (gravStream) gravStream.getTracks().forEach(t => t.stop());
+      gravStream = null;
+      gravador = null;
+      vozBtn.classList.remove('gravando');
+      if (gravCancelada || curto) return;   // toque sem falar
+      socket.emit('voz:enviar', { audio: await blob.arrayBuffer(), tipo });
+    };
+    rec.start();
+    vozBtn.classList.add('gravando');
+    gravTimer = setTimeout(() => pararGravacao(), MAX_GRAVACAO_MS);
+  }
+  function pararGravacao(cancelar) {
+    premido = false;
+    clearTimeout(gravTimer);
+    if (cancelar === true) gravCancelada = true;
+    if (gravador && gravador.state !== 'inactive') gravador.stop();
+  }
+  vozBtn.addEventListener('pointerdown', e => { e.preventDefault(); comecarGravacao(); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => vozBtn.addEventListener(ev, () => pararGravacao()));
+  vozBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Receber: entra numa fila e toca logo, um a seguir ao outro (como numa chamada)
+  socket.on('voz:msg', ({ nome: n, audio, tipo }) => {
+    if (!vozLigada || !audio) return;
+    if (filaVoz.length >= 6) filaVoz.shift();
+    filaVoz.push({ n, audio, tipo });
+    tocarProxima();
+  });
+  function tocarProxima() {
+    if (aTocar) return;
+    const m = filaVoz.shift();
+    if (!m) return;
+    aTocar = true;
+    const url = URL.createObjectURL(new Blob([m.audio], { type: m.tipo }));
+    const aviso = document.createElement('div');
+    aviso.className = 'chat-msg';
+    const b = document.createElement('b');
+    b.textContent = m.n;
+    aviso.append(b, document.createTextNode('a falar…'));
+    chatFlutua.appendChild(aviso);
+    let feito = false;
+    const fim = () => {
+      if (feito) return;
+      feito = true;
+      URL.revokeObjectURL(url);   // liberta o áudio da memória
+      aviso.remove();
+      aTocar = false;
+      tocarProxima();
+    };
+    const a = new Audio(url);
+    a.onended = fim;
+    a.onerror = fim;
+    a.play().catch(fim);
+  }
+  aplicarVoz();
 
   function alternarPerfil() {
     perfilPainel.hidden = !perfilPainel.hidden;
