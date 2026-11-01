@@ -9,6 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use('/.well-known', express.static('public/.well-known'));   // ligação ao app Android (passo 4)
 app.use(express.static('public'));
 require('./admin')(app);   // ADMIN
 
@@ -749,6 +750,21 @@ io.on('connection', (socket) => {
     const eu = sala.jogadores.find(j => j.socketId === socket.id);
     const n = (eu && eu.nome) || String(nome || '').trim().slice(0, 20) || 'Jogador';
     io.to(sala.id).emit('chat:msg', { nome: n, texto: t });
+  });
+
+  // Voz ao vivo: reencaminha o áudio para os outros da sala, sem guardar nada
+  socket.on('voz:enviar', ({ audio, tipo } = {}) => {
+    const sala = salas[socket.data.salaId];
+    if (!sala || !sala.iniciado) return;
+    if (!Buffer.isBuffer(audio) || audio.length === 0 || audio.length > 300000) return;   // ~300 KB
+    const t = String(tipo || '');
+    if (!t.startsWith('audio/')) return;
+    const agora = Date.now();
+    if (agora - (socket.ultimaVoz || 0) < 1000) return;   // 1 áudio por segundo
+    socket.ultimaVoz = agora;
+    const eu = sala.jogadores.find(j => j.socketId === socket.id);
+    if (!eu) return;
+    socket.to(sala.id).emit('voz:msg', { nome: eu.nome, audio, tipo: t.slice(0, 60) });
   });
 
   socket.on('jogo:rolar', () => {
