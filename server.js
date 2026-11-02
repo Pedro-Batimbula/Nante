@@ -5,6 +5,7 @@ const { criarEstadoInicial, jogadoresAtivosIndices, jogadorAtivoIndice, jogadorD
 const { escolherJogada } = require('./ia');   // IA
 const historico = require('./historico');   // HISTÓRICO
 const crypto = require('crypto');
+const { escolherJogada } = require('./ia');   // IA
 const contas = require('./contas');         // CONTAS
 const app = express();
 const server = http.createServer(app);
@@ -326,6 +327,49 @@ function pagarMatadas(sala) {
       if (r.moedas !== undefined) io.to(j.socketId).emit('moedas:saldo', { moedas: r.moedas, delta: PREMIO_MATADA, motivo: 'matada' });
     });
   });
+}
+
+// ===== IA: joga a vez dela (rola, move, repete até passar a vez) =====
+const PAUSA_IA = 900;   // ms entre cada ação, para dar para ver o que ela faz
+
+function vezDaIA(sala) {
+  const est = sala.estadoDoJogo;
+  const ia = sala.jogadores.find(j => j.ehIA);
+  if (!sala.vsIA || !est || est.jogoTerminado || sala.iaAJogar || !ia) return;
+  if (jogadorAtivoIndice(est) !== ia.indice) return;
+  sala.iaAJogar = true;
+  setTimeout(() => passoIA(sala), PAUSA_IA);
+}
+
+function passoIA(sala) {
+  const est = sala.estadoDoJogo;
+  const ia = sala.jogadores.find(j => j.ehIA);
+  if (salas[sala.id] !== sala || !est || est.jogoTerminado || !ia || jogadorAtivoIndice(est) !== ia.indice) {
+    sala.iaAJogar = false;
+    return;
+  }
+
+  if (est.dadosDisponiveis.length === 0 && est.bonusesCaptura.length === 0) {
+    const dados = rolarDados(est);
+    pagarMatadas(sala);
+    io.to(sala.id).emit('jogo:dadosRolados', { jogador: ia.indice, dados });
+  } else {
+    const jogada = escolherJogada(est, sala.nivelIA);
+    if (!jogada) { sala.iaAJogar = false; return; }
+    const r = moverPeca(est, jogada.pecaId, jogada.destinoId);
+    pagarMatadas(sala);
+    if (!r.sucesso) { sala.iaAJogar = false; return; }
+  }
+
+  io.to(sala.id).emit('estadoAtualizado', est);
+
+  if (est.jogoTerminado) {
+    sala.iaAJogar = false;
+    iniciarFaseDeDecisao(sala);
+    return;
+  }
+  if (jogadorAtivoIndice(est) !== ia.indice) { sala.iaAJogar = false; return; }   // passou a vez ao humano
+  setTimeout(() => passoIA(sala), PAUSA_IA);
 }
 
 // ===== Amigos: presença online, listas e avisos =====
@@ -899,6 +943,7 @@ io.on('connection', (socket) => {
     }
 
     const dados = rolarDados(estado);
+    vezDaIA(sala);   // IA: se a vez passou para ela, joga
 
     pagarMatadas(sala);
     io.to(sala.id).emit('jogo:dadosRolados', { jogador: jogadorDoSocket.indice, dados });
@@ -925,6 +970,7 @@ io.on('connection', (socket) => {
     }
 
     const resultado = moverPeca(estado, pecaId, destinoId);
+    vezDaIA(sala);   // IA: se a vez passou para ela, joga
     agendarIA(sala, PAUSA_IA);
     pagarMatadas(sala);
     if (!resultado.sucesso) {
