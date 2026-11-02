@@ -1,7 +1,8 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { criarEstadoInicial, jogadoresAtivosIndices, jogadorAtivoIndice, jogadorDaPeca, rolarDados, moverPeca, marcarAbandono } = require('./regras');
+const { criarEstadoInicial, jogadoresAtivosIndices, jogadorAtivoIndice, jogadorDaPeca, rolarDados, moverPeca, marcarAbandono, passarVezOuContinuar } = require('./regras');
+const { escolherJogada } = require('./ia');   // IA
 const historico = require('./historico');   // HISTÓRICO
 const crypto = require('crypto');
 const contas = require('./contas');         // CONTAS
@@ -166,7 +167,7 @@ function removerJogadorDeTodasAsSalas(socketId) {
     const mesaPrivadaAEspera = sala.privada && !sala.iniciado;   // fica viva, mesmo vazia
     if (todosSairam && !mesaPrivadaAEspera) {
       // HISTÓRICO: se a sala acabou com o jogo a meio, fica registado como abandonado
-      if (sala.estadoDoJogo && !sala.estadoDoJogo.jogoTerminado) {
+      if (!sala.ia && sala.estadoDoJogo && !sala.estadoDoJogo.jogoTerminado) {
         historico.registarFim(sala.jogoId, sala.estadoDoJogo, 'abandonado');
       }
       delete salas[sala.id];
@@ -178,13 +179,13 @@ function removerJogadorDeTodasAsSalas(socketId) {
 // Emite os resultados finais e coloca a sala em modo de decisão: cada jogador escolhe
 // "continuar" (recomeçar com os mesmos jogadores) ou "sair".
 function iniciarFaseDeDecisao(sala) {
-  historico.registarFim(sala.jogoId, sala.estadoDoJogo);   // HISTÓRICO
+  if (!sala.ia) historico.registarFim(sala.jogoId, sala.estadoDoJogo);   // HISTÓRICO
   // ESTATÍSTICAS: +1 jogo a cada jogador (quem abandonou não conta) e +1 vitória ao 1.º lugar
   sala.jogadores.forEach(j => {
     const est = sala.estadoDoJogo.jogadores[j.indice];
-    if (j.contaId && est && !est.abandonou) contas.registarResultado(j.contaId, est.classificacao === 1);
+    if (!sala.ia && j.contaId && est && !est.abandonou) contas.registarResultado(j.contaId, est.classificacao === 1);
   });
-  pagarFimDeJogo(sala);   // APOSTAS e bónus de vitória
+  if (!sala.ia) pagarFimDeJogo(sala);   // APOSTAS e bónus de vitória
   sala.aguardandoDecisao = true;
   sala.decisoes = {};
 
@@ -311,6 +312,7 @@ const PREMIO_MATADA = 100, MAX_MATADAS_PAGAS = 10;   // limite por jogador em ca
 function pagarMatadas(sala) {
   const est = sala.estadoDoJogo;
   if (!est || !est.matadas || !est.matadas.length) return;
+  if (sala.ia) { est.matadas.length = 0; return; }   // IA: sem moedas
   const lista = est.matadas.splice(0);   // esvazia antes de o estado seguir para os clientes
   if (sala.matadasEstado !== est) { sala.matadasEstado = est; sala.matadasPagas = {}; }
   lista.forEach(m => {
@@ -434,6 +436,63 @@ async function pagarFimDeJogo(sala) {
   io.to(sala.id).emit('jogo:premios', premios.map(pr => ({ nome: pr.p.j.nome, valor: pr.valor, motivo: pr.motivo })));
 }
 
+// ===== Jogar com IA =====
+// Sala com um humano (índice 0) contra a IA (índice 2). Sem moedas, estatísticas nem histórico.
+const NIVEIS_IA = ['iniciante', 'medio', 'avancado'];
+const NOMES_IA = { iniciante: 'IA Iniciante', medio: 'IA Média', avancado: 'IA Avançada' };
+const PAUSA_IA = 1000;   // ms entre cada ação da IA, para se ver o jogo
+
+function ehVezDaIA(sala) {
+  const est = sala.estadoDoJogo;
+  return !!(sala.ia && sala.iniciado && est && !est.jogoTerminado && jogadorAtivoIndice(est) === sala.iaIndice);
+}
+
+function agendarIA(sala, ms) {
+  clearTimeout(sala.timerIA);
+  if (ehVezDaIA(sala)) sala.timerIA = setTimeout(() => jogadaDaIA(sala), ms);
+}
+
+function jogadaDaIA(sala) {
+  if (salas[sala.id] !== sala || !ehVezDaIA(sala)) return;
+  try {
+    const est = sala.estadoDoJogo;
+    if (est.dadosDisponiveis.length === 0 && est.bonusesCaptura.length === 0) {
+      const dados = rolarDados(est);
+      io.to(sala.id).emit('jogo:dadosRolados', { jogador: sala.iaIndice, dados });
+    } else {
+      const jogada = escolherJogada(est, sala.nivelIA);
+      if (jogada) moverPeca(est, jogada.pecaId, jogada.destinoId);
+      else { est.dadosDisponiveis = []; est.bonusesCaptura = []; passarVezOuContinuar(est); }   // sem jogada válida: passa a vez
+    }
+    pagarMatadas(sala);   // na sala da IA só limpa a lista
+    io.to(sala.id).emit('estadoAtualizado', est);
+    if (est.jogoTerminado) { iniciarFaseDeDecisao(sala); return; }
+    agendarIA(sala, PAUSA_IA);
+  } catch (e) {
+    console.error('Erro na IA:', e);
+  }
+}
+
+function comecarJogoContraIA(sala) {
+  sala.aguardandoDecisao = false;
+  sala.decisoes = {};
+  sala.iniciado = true;
+  sala.estadoDoJogo = criarEstadoInicial(sala.totalPlayers, sala.totalPecas);
+  io.to(sala.id).emit('jogo:iniciar', estadoPublicoDaSala(sala));
+  io.to(sala.id).emit('estadoAtualizado', sala.estadoDoJogo);
+  agendarIA(sala, PAUSA_IA);
+}
+
+// Fim do jogo contra a IA: 'continuar' = revanche; 'sair' = apaga a sala
+function decidirContraIA(sala, socket, decisao) {
+  if (decisao === 'continuar') { comecarJogoContraIA(sala); return; }
+  clearTimeout(sala.timerIA);
+  socket.leave(sala.id);
+  socket.data.salaId = null;
+  delete salas[sala.id];
+  avisarTodosDaListaDeSalas();
+}
+
 io.on('connection', (socket) => {
   console.log('Ligado:', socket.id);
 
@@ -475,6 +534,27 @@ io.on('connection', (socket) => {
     const sala = encontrarOuCriarSala(nJogadores, nPecas);
     entrarNaSala(socket, sala, nome);
   });
+// ===== JOGAR COM IA: cria uma sala só para esta pessoa, contra a IA no nível escolhido =====
+  socket.on('ia:jogar', async ({ id, token, nivel, totalPecas }) => {
+    const conta = await contas.validar(id, token);
+    if (!conta) { socket.emit('conta:invalida'); return; }
+    socket.data.contaId = conta.id;
+    if (!NIVEIS_IA.includes(nivel)) return;
+    const jaNumaSala = Object.values(salas).some(s => s.jogadores.some(j => !j.desconectado && j.socketId === socket.id));
+    if (jaNumaSala) { socket.emit('jogo:erro', 'Já estás numa sala.'); return; }
+    const nPecas = [1, 2, 3, 4].includes(Number(totalPecas)) ? Number(totalPecas) : 4;
+    const sala = criarSala(2, nPecas);
+    sala.ia = true;
+    sala.nivelIA = nivel;
+    sala.iaIndice = 2;
+    sala.jogadores.push({ socketId: socket.id, nome: conta.nome, indice: 0, contaId: conta.id });
+    sala.jogadores.push({ socketId: null, nome: NOMES_IA[nivel], indice: 2, desconectado: true });   // a IA não tem ligação
+    socket.join(sala.id);
+    socket.data.salaId = sala.id;
+    socket.emit('lobby:voce', { indice: 0, nome: conta.nome });
+    comecarJogoContraIA(sala);
+    avisarTodosDaListaDeSalas();
+  });
 
   // Cliente pede a lista de salas em espera (para mostrar no lobby)
   socket.on('lobby:listarSalas', () => {
@@ -494,6 +574,35 @@ io.on('connection', (socket) => {
       return;
     }
     entrarNaSala(socket, sala, nome);
+  });
+
+  // ===== Jogar com IA =====
+  socket.on('ia:jogar', async ({ id, token, nivel, totalPecas }) => {
+    const conta = await contas.validar(id, token);
+    if (!conta) { socket.emit('conta:invalida'); return; }
+    socket.data.contaId = conta.id;
+    const nPecas = [1, 2, 3, 4].includes(Number(totalPecas)) ? Number(totalPecas) : 4;
+    const nv = ['iniciante', 'medio', 'avancado'].includes(nivel) ? nivel : 'iniciante';
+
+    const sala = criarSala(2, nPecas);
+    sala.privada = true;          // não aparece na lista pública
+    sala.vsIA = true;
+    sala.nivelIA = nv;
+
+    // humano = índice 0, IA = índice 2 (2 jogadores usam [0, 2])
+    sala.jogadores.push({ socketId: socket.id, nome: conta.nome, indice: 0, contaId: conta.id });
+    sala.jogadores.push({ socketId: 'ia', nome: 'IA (' + nv + ')', indice: 2, contaId: null, ehIA: true });
+    socket.join(sala.id);
+    socket.data.salaId = sala.id;
+
+    sala.iniciado = true;
+    sala.estadoDoJogo = criarEstadoInicial(2, nPecas);
+    sala.jogoId = historico.registarInicio(sala);
+
+    socket.emit('lobby:voce', { indice: 0, nome: conta.nome });
+    io.to(sala.id).emit('jogo:iniciar', estadoPublicoDaSala(sala));
+    io.to(sala.id).emit('estadoAtualizado', sala.estadoDoJogo);
+    avisarTodosDaListaDeSalas();
   });
 
   // ===== MESAS PRIVADAS =====
@@ -793,6 +902,7 @@ io.on('connection', (socket) => {
 
     pagarMatadas(sala);
     io.to(sala.id).emit('jogo:dadosRolados', { jogador: jogadorDoSocket.indice, dados });
+    agendarIA(sala, PAUSA_IA);
     io.to(sala.id).emit('estadoAtualizado', estado);
 
     if (estado.jogoTerminado) {
@@ -815,6 +925,7 @@ io.on('connection', (socket) => {
     }
 
     const resultado = moverPeca(estado, pecaId, destinoId);
+    agendarIA(sala, PAUSA_IA);
     pagarMatadas(sala);
     if (!resultado.sucesso) {
       socket.emit('jogo:erro', resultado.motivo);
@@ -833,7 +944,7 @@ io.on('connection', (socket) => {
     const sala = salas[socket.data.salaId];
     if (!sala || !sala.aguardandoDecisao) return;
     if (decisao !== 'continuar' && decisao !== 'sair') return;
-
+    if (sala.ia) { decidirContraIA(sala, socket, decisao); return; }
     sala.decisoes[socket.id] = decisao;
     resolverDecisoesPosJogo(sala);
   });
