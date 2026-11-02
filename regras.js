@@ -576,6 +576,7 @@ module.exports = {
   moverPeca,
   marcarAbandono,
   existeMovimentoPossivel,
+  passarVezOuContinuar,
   calcularDestinosPorPeca,
   pecasEmJogo,
   pecasNoNinho,
