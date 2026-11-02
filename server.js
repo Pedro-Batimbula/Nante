@@ -5,7 +5,6 @@ const { criarEstadoInicial, jogadoresAtivosIndices, jogadorAtivoIndice, jogadorD
 const { escolherJogada } = require('./ia');   // IA
 const historico = require('./historico');   // HISTÓRICO
 const crypto = require('crypto');
-const { escolherJogada } = require('./ia');   // IA
 const contas = require('./contas');         // CONTAS
 const app = express();
 const server = http.createServer(app);
@@ -329,48 +328,7 @@ function pagarMatadas(sala) {
   });
 }
 
-// ===== IA: joga a vez dela (rola, move, repete até passar a vez) =====
-const PAUSA_IA = 900;   // ms entre cada ação, para dar para ver o que ela faz
 
-function vezDaIA(sala) {
-  const est = sala.estadoDoJogo;
-  const ia = sala.jogadores.find(j => j.ehIA);
-  if (!sala.vsIA || !est || est.jogoTerminado || sala.iaAJogar || !ia) return;
-  if (jogadorAtivoIndice(est) !== ia.indice) return;
-  sala.iaAJogar = true;
-  setTimeout(() => passoIA(sala), PAUSA_IA);
-}
-
-function passoIA(sala) {
-  const est = sala.estadoDoJogo;
-  const ia = sala.jogadores.find(j => j.ehIA);
-  if (salas[sala.id] !== sala || !est || est.jogoTerminado || !ia || jogadorAtivoIndice(est) !== ia.indice) {
-    sala.iaAJogar = false;
-    return;
-  }
-
-  if (est.dadosDisponiveis.length === 0 && est.bonusesCaptura.length === 0) {
-    const dados = rolarDados(est);
-    pagarMatadas(sala);
-    io.to(sala.id).emit('jogo:dadosRolados', { jogador: ia.indice, dados });
-  } else {
-    const jogada = escolherJogada(est, sala.nivelIA);
-    if (!jogada) { sala.iaAJogar = false; return; }
-    const r = moverPeca(est, jogada.pecaId, jogada.destinoId);
-    pagarMatadas(sala);
-    if (!r.sucesso) { sala.iaAJogar = false; return; }
-  }
-
-  io.to(sala.id).emit('estadoAtualizado', est);
-
-  if (est.jogoTerminado) {
-    sala.iaAJogar = false;
-    iniciarFaseDeDecisao(sala);
-    return;
-  }
-  if (jogadorAtivoIndice(est) !== ia.indice) { sala.iaAJogar = false; return; }   // passou a vez ao humano
-  setTimeout(() => passoIA(sala), PAUSA_IA);
-}
 
 // ===== Amigos: presença online, listas e avisos =====
 const amigosDe = new Map();       // conta -> ids dos amigos (só de quem está online)
@@ -620,34 +578,6 @@ io.on('connection', (socket) => {
     entrarNaSala(socket, sala, nome);
   });
 
-  // ===== Jogar com IA =====
-  socket.on('ia:jogar', async ({ id, token, nivel, totalPecas }) => {
-    const conta = await contas.validar(id, token);
-    if (!conta) { socket.emit('conta:invalida'); return; }
-    socket.data.contaId = conta.id;
-    const nPecas = [1, 2, 3, 4].includes(Number(totalPecas)) ? Number(totalPecas) : 4;
-    const nv = ['iniciante', 'medio', 'avancado'].includes(nivel) ? nivel : 'iniciante';
-
-    const sala = criarSala(2, nPecas);
-    sala.privada = true;          // não aparece na lista pública
-    sala.vsIA = true;
-    sala.nivelIA = nv;
-
-    // humano = índice 0, IA = índice 2 (2 jogadores usam [0, 2])
-    sala.jogadores.push({ socketId: socket.id, nome: conta.nome, indice: 0, contaId: conta.id });
-    sala.jogadores.push({ socketId: 'ia', nome: 'IA (' + nv + ')', indice: 2, contaId: null, ehIA: true });
-    socket.join(sala.id);
-    socket.data.salaId = sala.id;
-
-    sala.iniciado = true;
-    sala.estadoDoJogo = criarEstadoInicial(2, nPecas);
-    sala.jogoId = historico.registarInicio(sala);
-
-    socket.emit('lobby:voce', { indice: 0, nome: conta.nome });
-    io.to(sala.id).emit('jogo:iniciar', estadoPublicoDaSala(sala));
-    io.to(sala.id).emit('estadoAtualizado', sala.estadoDoJogo);
-    avisarTodosDaListaDeSalas();
-  });
 
   // ===== MESAS PRIVADAS =====
   // O dono pede a lista das suas mesas (e fica identificado para receber atualizações)
@@ -943,7 +873,6 @@ io.on('connection', (socket) => {
     }
 
     const dados = rolarDados(estado);
-    vezDaIA(sala);   // IA: se a vez passou para ela, joga
 
     pagarMatadas(sala);
     io.to(sala.id).emit('jogo:dadosRolados', { jogador: jogadorDoSocket.indice, dados });
@@ -970,7 +899,6 @@ io.on('connection', (socket) => {
     }
 
     const resultado = moverPeca(estado, pecaId, destinoId);
-    vezDaIA(sala);   // IA: se a vez passou para ela, joga
     agendarIA(sala, PAUSA_IA);
     pagarMatadas(sala);
     if (!resultado.sucesso) {
