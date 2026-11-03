@@ -1698,14 +1698,20 @@
   }
 
   const sortear = () => 1 + Math.floor(Math.random() * 6);
+  let dadoEquipado = null;   // cor do dado equipado (só aparece no teu ecrã)
+  function atualizarDadoEquipado() {
+    const i = lojaItens.find(x => x.tipo === 'dado' && x.equipado);
+    dadoEquipado = i && i.visual ? i.visual.cor : null;
+  }
 
   // Mostra N dados (e fichas de bónus, ex.: +20) e devolve os elementos dos dados
-  function mostrarDados(valores, bonus) {
+  function mostrarDados(valores, bonus, meus) {
     dadosBox.innerHTML = '';
     const els = valores.map(v => {
       const el = document.createElement('div');
       dadosBox.appendChild(el);
       desenharDado(el, v);
+      if (meus && dadoEquipado) { el.style.background = dadoEquipado; el.style.setProperty('--pip', '#fff'); }
       return el;
     });
     (bonus || []).forEach(b => {
@@ -1745,7 +1751,7 @@
     atualizarBotao();
 
     const n = estado.quantidadeProximaRolagem || estado.quantidadeBase || 2;
-    const els = mostrarDados(Array.from({ length: n }, sortear));
+    const els = mostrarDados(Array.from({ length: n }, sortear), undefined, true);
     els.forEach(el => el.classList.add('rolando'));
 
     let voltas = 0;
@@ -3059,6 +3065,7 @@
       if (!r.ok) { lojaAviso('Erro ' + r.status + ' ao abrir a loja.', true); return; }
       const d = await r.json();
       lojaItens = d.itens;
+      atualizarDadoEquipado();
       lojaSaldos(d.moedas, d.saldoKz);
       renderLoja();
     } catch (e) { lojaAviso('Sem ligação ao servidor.', true); }
@@ -3235,6 +3242,7 @@
     mostrarDados([]);
     limparSelecao();
     jogoIniciado = true;
+    lojaCarregar();   // traz o dado equipado
     document.getElementById('saldoArena').hidden = false;
     limparHistorico();
     chatHist.hidden = true;
@@ -3250,7 +3258,7 @@
   /* ===== Eventos do jogo ===== */
   socket.on('jogo:dadosRolados', ({ jogador, dados }) => {
     pararAnimacao();
-    mostrarDados(dados);
+    mostrarDados(dados, undefined, jogador === meuIndice);
     ultimaRolagem = { jogador, dados };
   });
 
@@ -3274,7 +3282,7 @@
       if (pendente) texto += depois === meuIndice ? ' — escolhe uma peça' : '';
       else texto += depois !== r.jogador ? ' — passa a vez' : ' — joga outra vez';
     } else {
-      if (pendente) mostrarDados(estado.dadosDisponiveis, estado.bonusesCaptura);
+      if (pendente) mostrarDados(estado.dadosDisponiveis, estado.bonusesCaptura, depois === meuIndice);
       if (pendente) texto = depois === meuIndice ? 'ainda tens jogadas' : '';
       else texto = depois !== ativoAntes ? nome(ativoAntes) + ' terminou' : 'joga outra vez';
     }
