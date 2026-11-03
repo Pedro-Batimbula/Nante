@@ -44,4 +44,14 @@ module.exports = function (app) {
     if (r.erro) return res.status(400).json({ erro: r.erro });
     res.json({ ok: true, valor: r.valor });
   });
+
+  // Levantamento: o saldo fica retido logo e o pedido vai para a fila do admin
+  app.post('/kz/levantar', json, async (req, res) => {
+    const b = req.body || {};
+    const c = await contas.validar(b.id, b.token);
+    if (!c) return res.status(401).json({ erro: 'Sessão inválida.' });
+    const r = await contas.pedirLevantamento({ id: c.id, nome: c.nome }, b.valor, b.destino);
+    if (r.erro) return res.status(400).json({ erro: r.erro });
+    res.json({ ok: true, valor: r.valor, saldoKz: r.saldoKz });
+  });
 };

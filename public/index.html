@@ -391,6 +391,12 @@
   .kz-foto-linha{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; color: rgba(255,255,255,.75); }
   .kz-foto-linha label{ cursor: pointer; }
   .kz-msg{ min-height: 18px; margin-top: 8px; text-align: center; font-size: 13px; }
+  .kz-botoes-topo{ display: flex; flex-direction: column; gap: 6px; }
+  #kzLevValor, #kzLevDestino{
+    display: block; width: 100%; margin: 6px 0 10px; padding: 10px; color: #fff;
+    font: 16px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
 
   /* ===== Loja ===== */
   .m-loja{
@@ -959,7 +965,16 @@
             <span class="kz-rot">Carteira KZ</span>
             <div class="kz-saldo"><b id="kzSaldo">0</b> KZ</div>
           </div>
-          <button type="button" class="btn-mini btn-destaque" id="kzDepositarBtn">Depositar</button>
+          <div class="kz-botoes-topo">
+            <button type="button" class="btn-mini btn-destaque" id="kzDepositarBtn">Depositar</button>
+            <button type="button" class="btn-mini" id="kzLevantarBtn">Levantar</button>
+          </div>
+        </div>
+        <div id="kzLevForm" class="kz-form" hidden>
+          <p class="privada-nota">Indica o valor (mínimo <span id="kzLevMinTxt">1000</span> KZ) e o número Express ou a conta onde queres receber. O valor sai do saldo na hora e o admin paga em seguida.</p>
+          <input id="kzLevValor" type="number" inputmode="numeric" min="1000" placeholder="Valor em KZ">
+          <input id="kzLevDestino" type="text" maxlength="60" placeholder="Número Express ou conta" autocomplete="off">
+          <button type="button" id="kzLevEnviarBtn" class="btn-mini btn-destaque" style="width:100%">Pedir levantamento</button>
         </div>
         <div id="kzForm" class="kz-form" hidden>
           <p class="privada-nota">1) Envia o dinheiro por Express para: <b id="kzNumero">...</b> <button type="button" class="btn-mini" id="kzCopiarBtn" hidden>Copiar</button></p>
@@ -2764,7 +2779,7 @@
   const kzForm = document.getElementById('kzForm');
   const kzMsg = document.getElementById('kzMsg');
   const kzFicheiro = document.getElementById('kzFicheiro');
-  let kzDepMin = 500, kzNumeroAtual = '';
+  let kzDepMin = 500, kzLevMin = 1000, kzNumeroAtual = '';
 
   function kzAviso(t, erro) {
     kzMsg.textContent = t;
@@ -2783,6 +2798,9 @@
       document.getElementById('kzSaldo').textContent = Number(d.saldoKz || 0).toLocaleString('pt-PT');
       kzNumeroAtual = d.numero || '';
       kzDepMin = d.depositoMin || 500;
+      kzLevMin = d.levantamentoMin || 1000;
+      document.getElementById('kzLevMinTxt').textContent = kzLevMin;
+      document.getElementById('kzLevValor').min = kzLevMin;
       document.getElementById('kzNumero').textContent = kzNumeroAtual || 'ainda não definido';
       document.getElementById('kzCopiarBtn').hidden = !kzNumeroAtual;
       document.getElementById('kzValor').min = kzDepMin;
@@ -2819,6 +2837,7 @@
 
   document.getElementById('kzDepositarBtn').addEventListener('click', () => {
     kzForm.hidden = !kzForm.hidden;
+    document.getElementById('kzLevForm').hidden = true;
     kzAviso('');
     kzCarregar();
   });
@@ -2998,6 +3017,40 @@
     lojaAba = b.dataset.aba;
     document.querySelectorAll('#lojaAbas button').forEach(x => x.classList.toggle('ativo', x === b));
     renderLoja();
+  });
+
+  /* ===== Carteira KZ: levantamento ===== */
+  const kzLevForm = document.getElementById('kzLevForm');
+  document.getElementById('kzLevantarBtn').addEventListener('click', () => {
+    kzLevForm.hidden = !kzLevForm.hidden;
+    kzForm.hidden = true;
+    kzAviso('');
+    kzCarregar();
+  });
+  document.getElementById('kzLevEnviarBtn').addEventListener('click', async () => {
+    if (!sessao) return;
+    const btn = document.getElementById('kzLevEnviarBtn');
+    const valor = Math.trunc(Number(document.getElementById('kzLevValor').value));
+    const destino = document.getElementById('kzLevDestino').value.trim();
+    if (!(valor >= kzLevMin)) { kzAviso('O levantamento mínimo é de ' + kzLevMin + ' KZ.', true); return; }
+    if (destino.length < 4) { kzAviso('Indica o número Express ou a conta para receber.', true); return; }
+    if (!window.confirm('Levantar ' + valor.toLocaleString('pt-PT') + ' KZ para ' + destino + '?')) return;
+    btn.disabled = true;
+    kzAviso('A enviar...');
+    try {
+      const r = await fetch('/kz/levantar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...credenciais(), valor, destino })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.erro) { kzAviso(d.erro || 'Não foi possível pedir o levantamento.', true); return; }
+      document.getElementById('kzSaldo').textContent = Number(d.saldoKz).toLocaleString('pt-PT');
+      document.getElementById('kzLevValor').value = '';
+      kzLevForm.hidden = true;
+      kzAviso('Pedido de ' + d.valor.toLocaleString('pt-PT') + ' KZ enviado! O admin vai pagar em breve.');
+    } catch (e) {
+      kzAviso('Sem ligação ao servidor.', true);
+    } finally { btn.disabled = false; }
   });
 
   // com o perfil aberto, o saldo KZ atualiza sozinho (para ver a confirmação do admin)
