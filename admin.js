@@ -52,6 +52,23 @@ module.exports = function (app) {
     res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
     res.send(foto);
   });
+  // ===== Dinheiro real (KZ): levantamentos =====
+  app.get('/admin/kz/resumo', autenticar, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const r = await contas.resumoKz();
+    if (!r) return res.status(500).json({ erro: 'Sem dados.' });
+    res.json(r);
+  });
+  app.get('/admin/kz/levantamentos', autenticar, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ pendentes: await contas.listarLevantamentosPendentes() });
+  });
+  app.post('/admin/kz/levantamento/decidir', autenticar, json, async (req, res) => {
+    if (!req.is('application/json')) return res.status(400).json({ erro: 'Pedido inválido.' });
+    const b = req.body || {};
+    const r = await contas.decidirLevantamento(b.id, b.pago === true);
+    res.status(r.erro ? 400 : 200).json(r);
+  });
   app.post('/admin/kz/decidir', autenticar, json, async (req, res) => {
     if (!req.is('application/json')) return res.status(400).json({ erro: 'Pedido inválido.' });
     const b = req.body || {};
@@ -131,6 +148,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--azul);outline-o
   <h1>Histórico de jogos</h1>
   <p class="sub" id="atualizado">A carregar…</p>
 
+  <h2>Conta geral</h2>
+  <div class="totais" id="kzResumo"></div>
+  <p class="nota" id="kzConfere" style="margin:-14px 0 24px"></p>
+
   <section class="kz">
     <h2>Depósitos KZ<span id="kzBadge"></span></h2>
     <div class="kz-config">
@@ -139,6 +160,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--azul);outline-o
       <span id="kzMsg" class="nota"></span>
     </div>
     <div class="lista" id="kzLista"></div>
+  </section>
+
+  <section class="kz">
+    <h2>Levantamentos KZ<span id="levBadge" style="margin-left:8px;font-size:13px;font-weight:500;color:var(--amarelo)"></span></h2>
+    <div class="lista" id="levLista"></div>
   </section>
 
   <div class="totais" id="totais"></div>
@@ -252,6 +278,11 @@ document.getElementById('filtros').addEventListener('click', function (e) {
 document.getElementById('busca').addEventListener('input', render);
 
 var kzAbertos = {}, kzSig = '';
+var kzNDep = 0, kzNLev = 0;
+function kzTitulo() {
+  var t = kzNDep + kzNLev;
+  document.title = (t ? '(' + t + ') ' : '') + 'Nante – admin';
+}
 
 function kzCarregar() {
   fetch('/admin/kz', { cache: 'no-store' })
@@ -260,7 +291,8 @@ function kzCarregar() {
       var campo = document.getElementById('kzNumero');
       if (document.activeElement !== campo) campo.value = d.numero || '';
       var n = d.pendentes.length;
-      document.title = (n ? '(' + n + ') ' : '') + 'Nante – admin';
+      kzNDep = n;
+      kzTitulo();
       document.getElementById('kzBadge').textContent = n ? n + ' por confirmar' : '';
       var sig = JSON.stringify(d.pendentes.map(function (p) { return p.id; })) + JSON.stringify(kzAbertos);
       if (sig === kzSig) return;
@@ -316,6 +348,79 @@ carregar();
 kzCarregar();
 setInterval(carregar, 10000);
 setInterval(kzCarregar, 10000);
+
+var levSig = '';
+
+function levCarregar() {
+  fetch('/admin/kz/levantamentos', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      var n = d.pendentes.length;
+      kzNLev = n;
+      kzTitulo();
+      document.getElementById('levBadge').textContent = n ? n + ' por pagar' : '';
+      var sig = JSON.stringify(d.pendentes.map(function (p) { return p.id; }));
+      if (sig === levSig) return;
+      levSig = sig;
+      var el = document.getElementById('levLista');
+      if (!n) { el.innerHTML = '<div class="vazio">Nenhum levantamento à espera.</div>'; return; }
+      el.innerHTML = d.pendentes.map(function (p) {
+        return '<div class="kz-item" data-id="' + p.id + '">' +
+          '<div class="kz-topo"><b>' + esc(p.nome) + '</b><span class="kz-valor">' + p.valor + ' KZ</span><span class="n">' + fmtData(p.criado_em) + '</span></div>' +
+          '<div class="n">Enviar para: <b>' + esc(p.destino) + '</b></div>' +
+          '<div class="kz-botoes">' +
+          '<button type="button" class="ok" data-acao="pago">Marcar como pago</button>' +
+          '<button type="button" class="no" data-acao="no">Rejeitar</button></div></div>';
+      }).join('');
+    })
+    .catch(function () {});
+}
+
+document.getElementById('levLista').addEventListener('click', function (e) {
+  var acao = e.target.getAttribute && e.target.getAttribute('data-acao');
+  if (!acao) return;
+  var item = e.target.closest('.kz-item');
+  var id = Number(item.getAttribute('data-id'));
+  var pago = acao === 'pago';
+  var valor = item.querySelector('.kz-valor').textContent;
+  var quem = item.querySelector('b').textContent;
+  var texto = pago
+    ? 'Confirmas que JÁ enviaste ' + valor + ' a ' + quem + '?'
+    : 'Rejeitar o levantamento de ' + valor + ' de ' + quem + '? O saldo volta para ele.';
+  if (!window.confirm(texto)) return;
+  fetch('/admin/kz/levantamento/decidir', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id, pago: pago })
+  }).then(function (r) { return r.json(); })
+    .then(function (d) { if (d.erro) window.alert(d.erro); levSig = ''; levCarregar(); })
+    .catch(function () { window.alert('Sem ligação ao servidor.'); });
+});
+
+levCarregar();
+setInterval(levCarregar, 10000);
+
+function kzFmt(n) { return Number(n).toLocaleString('pt-PT') + ' KZ'; }
+
+function resumoCarregar() {
+  fetch('/admin/kz/resumo', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      document.getElementById('kzResumo').innerHTML =
+        '<div><b>' + kzFmt(d.casa) + '</b><span>Conta geral (ganhos da casa)</span></div>' +
+        '<div><b>' + kzFmt(d.jogadores) + '</b><span>Saldo dos jogadores</span></div>' +
+        '<div><b>' + kzFmt(d.depositado) + '</b><span>Total depositado</span></div>' +
+        '<div><b>' + kzFmt(d.levantado) + '</b><span>Total levantado (pago)</span></div>' +
+        '<div><b>' + kzFmt(d.porPagar) + '</b><span>Por pagar</span></div>';
+      var caixa = d.depositado - d.levantado;
+      var soma = d.casa + d.jogadores + d.porPagar;
+      document.getElementById('kzConfere').textContent =
+        'Dinheiro real em caixa (esperado): ' + kzFmt(caixa) +
+        (caixa === soma ? ' · contas certas ✓' : ' · atenção: não bate certo com os saldos (diferença de ' + kzFmt(caixa - soma) + ')');
+    })
+    .catch(function () {});
+}
+resumoCarregar();
+setInterval(resumoCarregar, 10000);
 </script>
 </body>
 </html>`;

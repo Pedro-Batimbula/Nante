@@ -619,7 +619,119 @@ async function equiparItem(jogadorId, itemId, equipar) {
   }
 }
 
+// ===== Levantamentos (KZ) =====
+const MAX_LEV_PENDENTES = 3;
+
+// O saldo é descontado logo (fica retido) e o pedido entra na fila do admin.
+// Tudo num só comando: ou acontece tudo, ou não acontece nada.
+async function pedirLevantamento(jogador, valorBruto, destinoBruto) {
+  if (!pool) return SEM_BD;
+  const valor = Math.trunc(Number(valorBruto));
+  const destino = String(destinoBruto || '').trim().replace(/\s+/g, ' ');
+  if (!Number.isInteger(valor) || valor < LEV_MIN) return { erro: 'O levantamento mínimo é de ' + LEV_MIN + ' KZ.' };
+  if (destino.length < 4 || destino.length > 60) return { erro: 'Indica o número Express ou a conta para receber.' };
+  try {
+    const p = await pool.query(
+      "SELECT COUNT(*)::int AS n FROM nante_levantamentos WHERE jogador_id = $1 AND estado = 'pendente'",
+      [jogador.id]
+    );
+    if (p.rows[0].n >= MAX_LEV_PENDENTES) return { erro: 'Já tens levantamentos à espera de pagamento.' };
+    const r = await pool.query(
+      `WITH d AS (
+         UPDATE nante_contas SET saldo_kz = saldo_kz - $2::int
+         WHERE id = $1 AND saldo_kz >= $2::int RETURNING id, nome, saldo_kz
+       ), l AS (
+         INSERT INTO nante_levantamentos (jogador_id, nome, valor, destino)
+         SELECT id, nome, $2::int, $3::text FROM d RETURNING id
+       ), m AS (
+         INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+         SELECT id, nome, 'levantamento', -($2::int) FROM d
+       )
+       SELECT d.saldo_kz, l.id FROM d, l`,
+      [jogador.id, valor, destino]
+    );
+    if (!r.rowCount) return { erro: 'Saldo KZ insuficiente.' };
+    return { ok: true, id: r.rows[0].id, valor, nome: jogador.nome, saldoKz: Number(r.rows[0].saldo_kz) };
+  } catch (e) {
+    console.error('Contas: erro ao pedir levantamento:', e.message);
+    return { erro: 'Não foi possível pedir o levantamento.' };
+  }
+}
+
+// Fila do admin
+async function listarLevantamentosPendentes() {
+  if (!pool) return [];
+  try {
+    const r = await pool.query("SELECT id, nome, valor, destino, criado_em FROM nante_levantamentos WHERE estado = 'pendente' ORDER BY id");
+    return r.rows;
+  } catch (e) { return []; }
+}
+
+// Admin: pago = true (o dinheiro já foi enviado) ou false (rejeita e devolve o saldo ao jogador)
+async function decidirLevantamento(id, pago) {
+  if (!pool) return SEM_BD;
+  const n = Number(id);
+  if (!Number.isInteger(n)) return { erro: 'Pedido inválido.' };
+  try {
+    if (pago) {
+      const r = await pool.query(
+        "UPDATE nante_levantamentos SET estado = 'pago', decidido_em = now() WHERE id = $1 AND estado = 'pendente' RETURNING jogador_id, valor",
+        [n]
+      );
+      if (!r.rowCount) return { erro: 'Esse levantamento já foi tratado.' };
+      return { ok: true, pago: true, jogadorId: r.rows[0].jogador_id };
+    }
+    const r = await pool.query(
+      `WITH l AS (
+         UPDATE nante_levantamentos SET estado = 'rejeitado', decidido_em = now()
+         WHERE id = $1 AND estado = 'pendente' RETURNING jogador_id, valor
+       ), c AS (
+         UPDATE nante_contas SET saldo_kz = saldo_kz + l.valor
+         FROM l WHERE nante_contas.id = l.jogador_id
+         RETURNING nante_contas.id, nante_contas.nome, nante_contas.saldo_kz
+       ), m AS (
+         INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+         SELECT c.id, c.nome, 'devolucao', l.valor FROM c, l
+       )
+       SELECT id, saldo_kz FROM c`,
+      [n]
+    );
+    if (!r.rowCount) return { erro: 'Esse levantamento já foi tratado.' };
+    return { ok: true, pago: false, jogadorId: r.rows[0].id, saldoKz: Number(r.rows[0].saldo_kz) };
+  } catch (e) {
+    console.error('Contas: erro ao decidir levantamento:', e.message);
+    return { erro: 'Não foi possível tratar o levantamento.' };
+  }
+}
+
+// ===== Resumo do dinheiro real (para o admin) =====
+async function resumoKz() {
+  if (!pool) return null;
+  try {
+    const r = await pool.query(`
+      SELECT
+        (SELECT saldo_kz FROM nante_conta_geral WHERE id = 1) AS casa,
+        (SELECT COALESCE(SUM(saldo_kz), 0) FROM nante_contas) AS jogadores,
+        (SELECT COALESCE(SUM(valor), 0) FROM nante_depositos WHERE estado = 'confirmado') AS depositado,
+        (SELECT COALESCE(SUM(valor), 0) FROM nante_levantamentos WHERE estado = 'pago') AS levantado,
+        (SELECT COALESCE(SUM(valor), 0) FROM nante_levantamentos WHERE estado = 'pendente') AS por_pagar`);
+    const l = r.rows[0];
+    return {
+      casa: Number(l.casa || 0),
+      jogadores: Number(l.jogadores),
+      depositado: Number(l.depositado),
+      levantado: Number(l.levantado),
+      porPagar: Number(l.por_pagar)
+    };
+  } catch (e) {
+    console.error('Contas: erro no resumo KZ:', e.message);
+    return null;
+  }
+}
+
 module.exports = {
+  resumoKz,
+  pedirLevantamento, listarLevantamentosPendentes, decidirLevantamento,
   inventario, comprarItem, equiparItem,
   DEP_MIN, LEV_MIN, numeroDeposito, definirNumeroDeposito, pedirDeposito, listarDepositosPendentes, fotoDeposito, decidirDeposito,
   diagnostico,
