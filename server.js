@@ -902,6 +902,20 @@ io.on('connection', (socket) => {
     socket.to(sala.id).emit('voz:msg', { nome: eu.nome, audio, tipo: t.slice(0, 60) });
   });
 
+  // Itens equipados de cada jogador da mesa: o cliente pede quando o jogo começa
+  socket.on('jogo:pedirEquipados', async () => {
+    const sala = salas[socket.data.salaId];
+    if (!sala || !sala.iniciado || !sala.jogadores.some(j => j.socketId === socket.id)) return;
+    const resultado = {};
+    for (const j of sala.jogadores) {
+      resultado[j.indice] = {};
+      if (!j.contaId) continue;   // a IA não tem itens
+      const itens = await contas.inventario(j.contaId);
+      itens.filter(i => i.equipado).forEach(i => { resultado[j.indice][i.tipo] = i.item_id; });
+    }
+    socket.emit('jogo:equipados', resultado);
+  });
+
   socket.on('jogo:rolar', () => {
     const sala = salas[socket.data.salaId];
     if (!sala || !sala.iniciado) return;
