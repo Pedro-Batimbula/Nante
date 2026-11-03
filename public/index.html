@@ -49,6 +49,11 @@
     box-sizing: content-box;
   }
 
+  /* Estágios equipados (loja) */
+  #board.tema-noite{ background: linear-gradient(#0b1030, #1a1f4d); }
+  #board.tema-neve{ background: linear-gradient(#bfe6ff, #6fb7e8); }
+  #board.tema-vulcao{ background: linear-gradient(#3b0d0d, #c0391b 70%, #ff9f1c); }
+
   /* Casas */
   .check{
     background: #f4f1f1;
@@ -122,6 +127,14 @@
   .peca.p1{ background: radial-gradient(circle at 35% 30%, #fbe98a, var(--amarelo)); }
   .peca.p2{ background: radial-gradient(circle at 35% 30%, #c78ae8, var(--roxo)); }
   .peca.p3{ background: radial-gradient(circle at 35% 30%, #f5a59b, var(--vermelho)); }
+  .peca.p0{ --pc: var(--azul); }
+  .peca.p1{ --pc: var(--amarelo); }
+  .peca.p2{ --pc: var(--roxo); }
+  .peca.p3{ --pc: var(--vermelho); }
+  /* peças equipadas (loja) */
+  .peca.sk-brilho{ box-shadow: 0 0 0 3px #ffd400, 0 0 14px 5px rgba(255,212,0,.8), inset 0 -4px 6px rgba(0,0,0,.3); }
+  .peca.sk-cristal{ background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(150,220,255,.45) 60%, rgba(80,170,255,.35)); border-color: var(--pc); }
+  .peca.sk-ouro{ background: radial-gradient(circle at 35% 30%, #fff3a6, #d4a017 70%, #8a5d00); border-color: var(--pc); }
   .peca.no-ninho{ width: var(--cell); height: var(--cell); }
   .peca.terminada{ width: calc(var(--cell) * 0.4); height: calc(var(--cell) * 0.4); border-width: 2px; }
   .peca.pode-mover{ animation: pulsar 1s ease-in-out infinite; }
@@ -1699,6 +1712,20 @@
 
   const sortear = () => 1 + Math.floor(Math.random() * 6);
   let dadoEquipado = null;   // cor do dado equipado (só aparece no teu ecrã)
+
+  // Dado, peças e estágio equipados: só no teu ecrã
+  function atualizarEquipados() {
+    atualizarDadoEquipado();
+    const eq = t => lojaItens.find(x => x.tipo === t && x.equipado);
+    const pc = eq('peca'), tb = eq('tabuleiro');
+    const estiloPeca = pc && pc.visual ? pc.visual.estilo : null;
+    pecas.forEach(p => {
+      ['brilho', 'cristal', 'ouro'].forEach(s => p.classList.remove('sk-' + s));
+      if (estiloPeca && Number(p.dataset.jogador) === meuIndice) p.classList.add('sk-' + estiloPeca);
+    });
+    ['noite', 'neve', 'vulcao'].forEach(t => board.classList.remove('tema-' + t));
+    if (tb && tb.visual && tb.visual.tema) board.classList.add('tema-' + tb.visual.tema);
+  }
   function atualizarDadoEquipado() {
     const i = lojaItens.find(x => x.tipo === 'dado' && x.equipado);
     dadoEquipado = i && i.visual ? i.visual.cor : null;
@@ -3065,7 +3092,7 @@
       if (!r.ok) { lojaAviso('Erro ' + r.status + ' ao abrir a loja.', true); return; }
       const d = await r.json();
       lojaItens = d.itens;
-      atualizarDadoEquipado();
+      atualizarEquipados();
       lojaSaldos(d.moedas, d.saldoKz);
       renderLoja();
     } catch (e) { lojaAviso('Sem ligação ao servidor.', true); }
