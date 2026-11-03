@@ -541,6 +541,18 @@
   }
   .aposta-atalhos{ display: flex; gap: 6px; margin-bottom: 8px; }
   .aposta-atalhos button{ flex: 1; }
+  .aposta-moeda{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .aposta-moeda button{
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,.4); background: transparent; color: #fff; cursor: pointer;
+    font: bold 15px 'Trebuchet MS', Arial, sans-serif;
+  }
+  .aposta-moeda button small{ font-weight: normal; font-size: 11px; opacity: .8; }
+  .aposta-moeda button .moeda{ width: 26px; height: 26px; }
+  .aposta-moeda .kz-letras{ font: 900 22px 'Trebuchet MS', Arial, sans-serif; color: #2ecc71; line-height: 26px; }
+  .aposta-moeda button[data-m="N"].ativo{ border-color: #ffd400; background: rgba(255,212,0,.18); }
+  .aposta-moeda button[data-m="KZ"].ativo{ border-color: #2ecc71; background: rgba(46,204,113,.2); }
+  .aposta-un{ font: 900 18px 'Trebuchet MS', Arial, sans-serif; color: #2ecc71; }
 
   /* Zoom de entrada no jogo (a transição só existe durante a animação, para não atrasar o arrastar) */
   #board.zoom-anima{ transition: transform 1.8s cubic-bezier(.45, 0, .2, 1); }
@@ -1127,18 +1139,21 @@
           <button type="button" data-tipo="aposta">Aposta</button>
         </div>
         <div class="privada-aposta" id="privadaApostaLinha" hidden>
-          <label for="privadaApostaValor">Valor da entrada (todos pagam o mesmo)</label>
-          <div class="aposta-campo">
-            <svg class="moeda"><use href="#moeda"/></svg>
-            <input id="privadaApostaValor" type="number" inputmode="numeric" min="10" max="10000" value="50">
+          <label>Apostar com…</label>
+          <div class="aposta-moeda" id="privadaMoeda">
+            <button type="button" data-m="N"><svg class="moeda"><use href="#moeda"/></svg><b>Moedas N</b><small>moedas do jogo</small></button>
+            <button type="button" data-m="KZ"><span class="kz-letras">KZ</span><b>Dinheiro real</b><small>kwanzas</small></button>
           </div>
-          <div class="aposta-atalhos">
-            <button type="button" class="btn-mini" data-v="10">10</button>
-            <button type="button" class="btn-mini" data-v="50">50</button>
-            <button type="button" class="btn-mini" data-v="100">100</button>
-            <button type="button" class="btn-mini" data-v="500">500</button>
+          <div id="privadaApostaCampos" hidden>
+            <label for="privadaApostaValor">Valor da entrada (todos pagam o mesmo)</label>
+            <div class="aposta-campo">
+              <svg class="moeda" id="privadaApostaIcone"><use href="#moeda"/></svg>
+              <input id="privadaApostaValor" type="number" inputmode="numeric" min="10" max="10000" value="50">
+              <span class="aposta-un" id="privadaApostaUn" style="display:none">KZ</span>
+            </div>
+            <div class="aposta-atalhos" id="privadaAtalhos"></div>
+            <p class="privada-nota" id="privadaApostaNota"></p>
           </div>
-          <p class="privada-nota">2 jogadores: o 1.º leva tudo. 3 ou 4: o 2.º recupera a entrada e o 1.º leva as dos restantes. Vitória: +200 extra.</p>
         </div>
         <div class="privada-opcoes" id="privadaN">
           <button type="button" data-n="2">2 jogadores</button>
@@ -1902,6 +1917,13 @@
   let privadaN = 4;
   let minhas = [];
   let codigoEspera = null;
+  let apostaAtual = null;
+  function textoAposta(a) {
+    if (!a) return '';
+    return a.moeda === 'KZ'
+      ? ' Aposta de ' + a.valor.toLocaleString('pt-PT') + ' KZ (dinheiro real): quem ganhar leva tudo menos 20% da casa.'
+      : ' Aposta de ' + a.valor.toLocaleString('pt-PT') + ' moedas N.';
+  }
 
   const credenciais = () => ({ id: sessao.id, token: sessao.token });
   
@@ -1969,7 +1991,7 @@
 
       const nomes = document.createElement('div');
       nomes.className = 'mesa-nomes';
-      nomes.textContent = (m.nomes.length ? m.nomes.join(', ') : 'Ninguém entrou ainda') + ' · ' + m.totalPecas + ' peças' + (m.aposta ? ' · aposta ' + m.aposta + ' moedas' : '');
+      nomes.textContent = (m.nomes.length ? m.nomes.join(', ') : 'Ninguém entrou ainda') + ' · ' + m.totalPecas + ' peças' + (m.aposta ? ' · aposta ' + m.aposta + (m.moedaAposta === 'KZ' ? ' KZ (dinheiro real)' : ' moedas N') : '');
 
       const botoes = document.createElement('div');
       botoes.className = 'mesa-botoes';
@@ -2010,7 +2032,8 @@
     document.getElementById('esperaCopiarLinkBtn').hidden = !codigoEspera;
     salaEsperaId = sala.id;
     setTimeout(renderAmigos, 0);
-    if (sala.aposta) document.getElementById('esperaTitulo').textContent += ' · aposta ' + sala.aposta + ' moedas';
+    apostaAtual = sala.aposta ? { valor: sala.aposta, moeda: sala.moedaAposta || 'N' } : null;
+    if (sala.aposta) document.getElementById('esperaTitulo').textContent += ' · aposta ' + sala.aposta + (sala.moedaAposta === 'KZ' ? ' KZ (dinheiro real)' : ' moedas N');
     const souDono = !!(sala.privada && sessao && sala.donoId === sessao.id);
     const comecar = document.getElementById('esperaComecarBtn');
     comecar.hidden = !souDono;
@@ -2047,6 +2070,49 @@
     document.querySelectorAll('#privadaN button').forEach(x => x.classList.toggle('ativo', x === b));
   });
   let privadaTipo = 'normal';
+
+  /* ===== Aposta: escolha explícita entre moedas N e KZ ===== */
+  const APOSTA_LIMITES = {
+    N: { min: 10, max: 10000, atalhos: [10, 50, 100, 500] },
+    KZ: { min: 100, max: 5000, atalhos: [100, 500, 1000, 2000] }
+  };
+  let privadaMoeda = null;   // 'N' ou 'KZ': tem de ser escolhida
+
+  function notaAposta() {
+    const kz = privadaMoeda === 'KZ';
+    const saldo = document.getElementById(kz ? 'kzSaldo' : 'saldoValor').textContent;
+    document.getElementById('privadaApostaNota').textContent = kz
+      ? 'DINHEIRO REAL. Todos pagam a mesma entrada. O 1.º lugar leva tudo menos 20% (taxa da casa). Se ninguém ganhar, as entradas são devolvidas. O teu saldo: ' + saldo + ' KZ.'
+      : '2 jogadores: o 1.º leva tudo. 3 ou 4: o 2.º recupera a entrada e o 1.º leva as dos restantes. Vitória: +200 extra. O teu saldo: ' + saldo + ' moedas N.';
+  }
+  function desenharApostaMoeda() {
+    document.getElementById('privadaApostaCampos').hidden = !privadaMoeda;
+    document.querySelectorAll('#privadaMoeda button').forEach(x => x.classList.toggle('ativo', x.dataset.m === privadaMoeda));
+    if (!privadaMoeda) return;
+    const kz = privadaMoeda === 'KZ';
+    const L = APOSTA_LIMITES[privadaMoeda];
+    const campo = document.getElementById('privadaApostaValor');
+    campo.min = L.min; campo.max = L.max; campo.value = L.atalhos[1];
+    campo.style.color = kz ? '#2ecc71' : '#ffd400';
+    campo.style.borderColor = kz ? 'rgba(46,204,113,.7)' : 'rgba(255,212,0,.6)';
+    document.getElementById('privadaApostaIcone').style.display = kz ? 'none' : '';
+    document.getElementById('privadaApostaUn').style.display = kz ? '' : 'none';
+    const at = document.getElementById('privadaAtalhos');
+    at.innerHTML = '';
+    L.atalhos.forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn-mini'; b.dataset.v = v; b.textContent = v;
+      at.appendChild(b);
+    });
+    notaAposta();
+  }
+  document.getElementById('privadaMoeda').addEventListener('click', e => {
+    const b = e.target.closest('button[data-m]');
+    if (!b) return;
+    privadaMoeda = b.dataset.m;
+    desenharApostaMoeda();
+    if (privadaMoeda === 'KZ') kzCarregar().then(notaAposta);   // atualiza o saldo KZ
+  });
   document.getElementById('privadaTipo').addEventListener('click', e => {
     const b = e.target.closest('button[data-tipo]');
     if (!b) return;
@@ -2062,11 +2128,16 @@
     if (!sessao) return;
     privadaMsg.textContent = '';
     const valor = Math.trunc(Number(document.getElementById('privadaApostaValor').value));
-    if (privadaTipo === 'aposta' && !(valor >= 10 && valor <= 10000)) {
-      privadaMsg.textContent = 'A aposta deve ser entre 10 e 10000 moedas.';
-      return;
+    if (privadaTipo === 'aposta') {
+      if (!privadaMoeda) { privadaMsg.textContent = 'Escolhe primeiro: apostar com moedas N ou com KZ (dinheiro real).'; return; }
+      const L = APOSTA_LIMITES[privadaMoeda];
+      if (!(valor >= L.min && valor <= L.max)) {
+        privadaMsg.textContent = 'A aposta deve ser entre ' + L.min + ' e ' + L.max + (privadaMoeda === 'KZ' ? ' KZ.' : ' moedas N.');
+        return;
+      }
+      if (privadaMoeda === 'KZ' && !window.confirm('Vais criar uma mesa com aposta de ' + valor.toLocaleString('pt-PT') + ' KZ em DINHEIRO REAL. Quem ganhar leva tudo menos 20% da casa. Continuar?')) return;
     }
-    socket.emit('privada:criar', { ...credenciais(), totalPlayers: privadaN, totalPecas: pecasEscolhidas, tipo: privadaTipo, aposta: valor });
+    socket.emit('privada:criar', { ...credenciais(), totalPlayers: privadaN, totalPecas: pecasEscolhidas, tipo: privadaTipo, aposta: valor, moedaAposta: privadaTipo === 'aposta' ? privadaMoeda : undefined });
   });
   document.getElementById('privadaEntrarBtn').addEventListener('click', () => {
     const cod = document.getElementById('privadaCodigo').value.trim().toUpperCase();
@@ -2123,7 +2194,7 @@
     document.getElementById('esperaMsg').textContent = '';
     prestesBotoes.hidden = false;
     prestes.hidden = false;
-    contagem(segundos, s => { prestesTxt.textContent = 'O criador da mesa vai começar o jogo. Queres participar? (' + s + 's)'; });
+    contagem(segundos, s => { prestesTxt.textContent = 'O criador da mesa vai começar o jogo.' + textoAposta(apostaAtual) + ' Queres participar? (' + s + 's)'; });
   });
   document.getElementById('prestesSimBtn').addEventListener('click', () => {
     socket.emit('privada:resposta', { resposta: 'participar' });
@@ -2574,6 +2645,24 @@
     }
   });
 
+  function mostrarToastKz(delta, motivo) {
+    toastMoedas.className = delta >= 0 ? 'ganho' : 'perda';
+    toastMoedas.innerHTML = '<b></b><span></span>';
+    toastMoedas.querySelector('b').textContent = (delta >= 0 ? '+' : '') + Number(delta).toLocaleString('pt-PT') + ' KZ';
+    toastMoedas.querySelector('span').textContent = MOTIVOS[motivo] || '';
+    toastMoedas.hidden = false;
+    toastMoedas.style.animation = 'none'; void toastMoedas.offsetWidth; toastMoedas.style.animation = '';
+    clearTimeout(timerToast);
+    timerToast = setTimeout(() => { toastMoedas.hidden = true; }, 2600);
+  }
+  socket.on('kz:saldo', ({ saldoKz, delta, motivo }) => {
+    ['kzSaldo', 'lojaKz'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = Number(saldoKz).toLocaleString('pt-PT');
+    });
+    if (delta) mostrarToastKz(delta, motivo);
+  });
+
   let premiosFim = [];
   const fimJogo = document.getElementById('fimJogo');
   function desenharPremios() {
@@ -2582,8 +2671,9 @@
     premiosFim.forEach(p => {
       const d = document.createElement('div');
       d.className = 'premio';
-      d.innerHTML = '<svg class="moeda"><use href="#moeda"/></svg><b></b><span></span>';
-      d.querySelector('b').textContent = '+' + p.valor;
+      const kz = p.moeda === 'KZ';
+      d.innerHTML = (kz ? '' : '<svg class="moeda"><use href="#moeda"/></svg>') + '<b></b><span></span>';
+      d.querySelector('b').textContent = '+' + (kz ? Number(p.valor).toLocaleString('pt-PT') + ' KZ' : p.valor);
       d.querySelector('span').textContent = p.nome + ' · ' + (MOTIVOS[p.motivo] || '');
       el.appendChild(d);
     });

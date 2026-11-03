@@ -93,6 +93,7 @@ function estadoPublicoDaSala(sala) {
     codigo: sala.privada ? sala.codigo : null,
     donoId: sala.privada ? sala.donoId : null,
     aposta: sala.aposta || 0,
+    moedaAposta: sala.moedaAposta || 'N',
     confirmando: !!sala.confirmando
   };
 }
@@ -129,7 +130,7 @@ function listaDoDono(donoId) {
         id: s.id, codigo: s.codigo, totalPlayers: s.totalPlayers, totalPecas: s.totalPecas,
         entraram: dentro.length, nomes: dentro.map(j => j.nome), iniciado: s.iniciado,
         donoSentado: dentro.some(j => j.contaId === donoId), confirmando: !!s.confirmando,
-        aposta: s.aposta || 0
+        aposta: s.aposta || 0, moedaAposta: s.moedaAposta || 'N'
       };
     });
 }
@@ -171,6 +172,10 @@ function removerJogadorDeTodasAsSalas(socketId) {
       // HISTÓRICO: se a sala acabou com o jogo a meio, fica registado como abandonado
       if (!sala.ia && sala.estadoDoJogo && !sala.estadoDoJogo.jogoTerminado) {
         historico.registarFim(sala.jogoId, sala.estadoDoJogo, 'abandonado');
+        if (sala.aposta > 0 && ehKz(sala) && sala.estadoKzDevolvido !== sala.estadoDoJogo) {
+          sala.estadoKzDevolvido = sala.estadoDoJogo;   // ninguém ganhou: cada um recebe a entrada de volta
+          sala.jogadores.forEach(j => { devolverEntrada(sala, j); });
+        }
       }
       delete salas[sala.id];
     }
@@ -381,25 +386,45 @@ setInterval(() => {
 
 // ===== Apostas e prémios =====
 const APOSTA_MIN = 10, APOSTA_MAX = 10000, BONUS_VITORIA = 200;
+const APOSTA_KZ_MIN = 100, APOSTA_KZ_MAX = 5000, TAXA_CASA = 0.2;   // dinheiro real (KZ): ajusta à vontade
+const ehKz = sala => sala.moedaAposta === 'KZ';
+const unidade = sala => (ehKz(sala) ? 'KZ' : 'moedas');
+const temSaldoParaAposta = (conta, sala) => (ehKz(sala) ? conta.saldoKz : conta.moedas) >= sala.aposta;
+
+// Avisa o jogador do novo saldo (moedas N ou KZ, conforme a mesa)
+function avisarSaldo(sala, j, r, delta, motivo) {
+  if (ehKz(sala)) {
+    if (r.saldoKz !== undefined) io.to(j.socketId).emit('kz:saldo', { saldoKz: r.saldoKz, delta, motivo });
+  } else if (r.moedas !== undefined) {
+    io.to(j.socketId).emit('moedas:saldo', { moedas: r.moedas, delta, motivo });
+  }
+}
+
+// Devolve a entrada a um jogador (mesa cancelada, sem vencedor, etc.)
+async function devolverEntrada(sala, j) {
+  const r = ehKz(sala)
+    ? await contas.mexerKz(j.contaId, sala.aposta, 'devolucao')
+    : await contas.mexerMoedas(j.contaId, sala.aposta, 'aposta_devolvida');
+  avisarSaldo(sala, j, r, sala.aposta, 'aposta_devolvida');
+}
 
 // Cobra a entrada a todos. Se alguém não tiver moedas, devolve o que já cobrou,
 // tira essa pessoa da mesa e devolve false.
 async function cobrarApostas(sala) {
   const cobrados = [];
   for (const j of sala.jogadores) {
-    const r = await contas.mexerMoedas(j.contaId, -sala.aposta, 'aposta_entrada');
+    const r = ehKz(sala)
+      ? await contas.mexerKz(j.contaId, -sala.aposta, 'aposta')
+      : await contas.mexerMoedas(j.contaId, -sala.aposta, 'aposta_entrada');
     if (r.erro) {
-      for (const c of cobrados) {
-        const d = await contas.mexerMoedas(c.contaId, sala.aposta, 'aposta_devolvida');
-        if (d.moedas !== undefined) io.to(c.socketId).emit('moedas:saldo', { moedas: d.moedas, delta: sala.aposta, motivo: 'aposta_devolvida' });
-      }
+      for (const c of cobrados) await devolverEntrada(sala, c);
       const s = io.sockets.sockets.get(j.socketId);
-      if (s) s.emit('jogo:erro', 'Não tens moedas suficientes para a aposta (' + sala.aposta + ').');
+      if (s) s.emit('jogo:erro', 'Não tens saldo suficiente para a aposta (' + sala.aposta + ' ' + unidade(sala) + ').');
       tirarDaMesa(sala, j);
-      io.to(sala.id).emit('privada:cancelado', { motivo: j.nome + ' não tinha moedas para a aposta e saiu da mesa.' });
+      io.to(sala.id).emit('privada:cancelado', { motivo: j.nome + ' não tinha saldo para a aposta e saiu da mesa.' });
       return false;
     }
-    io.to(j.socketId).emit('moedas:saldo', { moedas: r.moedas, delta: -sala.aposta, motivo: 'aposta_entrada' });
+    avisarSaldo(sala, j, r, -sala.aposta, 'aposta_entrada');
     cobrados.push(j);
   }
   return true;
@@ -419,11 +444,26 @@ async function pagarFimDeJogo(sala) {
     return { j, classificacao: e.classificacao, abandonou: !!e.abandonou };
   });
   const primeiro = lista.find(p => p.classificacao === 1);
-  if (!primeiro) return;
+  if (!primeiro) {
+    if (sala.aposta > 0 && ehKz(sala)) for (const p of lista) await devolverEntrada(sala, p.j);
+    return;
+  }
   const segundo = lista.find(p => p.classificacao === 2);
   const aposta = sala.aposta || 0;
   const premios = [];
-  if (aposta > 0) {
+  const premiosKz = [];
+  if (aposta > 0 && ehKz(sala)) {
+    const pote = aposta * n;
+    const taxa = Math.floor(pote * TAXA_CASA);
+    const r = await contas.pagarApostaKz(primeiro.j.contaId, pote - taxa, taxa);
+    if (r.saldoKz !== undefined) {
+      io.to(primeiro.j.socketId).emit('kz:saldo', { saldoKz: r.saldoKz, delta: pote - taxa, motivo: 'aposta_ganha' });
+      premiosKz.push({ nome: primeiro.j.nome, valor: pote - taxa, motivo: 'aposta_ganha', moeda: 'KZ' });
+    } else {
+      console.error('Aposta KZ: falhou o pagamento da sala ' + sala.id + ': ' + r.erro);
+      for (const p of lista) await devolverEntrada(sala, p.j);   // se não der para pagar, devolve a todos
+    }
+  } else if (aposta > 0) {
     const devolve = n >= 3 && !!segundo;
     premios.push({ p: primeiro, valor: aposta * (devolve ? n - 1 : n), motivo: 'aposta_ganha' });
     if (devolve) premios.push({ p: segundo, valor: aposta, motivo: 'aposta_devolvida' });
@@ -437,7 +477,10 @@ async function pagarFimDeJogo(sala) {
       io.to(pr.p.j.socketId).emit('moedas:saldo', { moedas: r.moedas, delta: pr.valor, motivo: pr.motivo });
     }
   }
-  io.to(sala.id).emit('jogo:premios', premios.map(pr => ({ nome: pr.p.j.nome, valor: pr.valor, motivo: pr.motivo })));
+  io.to(sala.id).emit('jogo:premios', [
+    ...premiosKz,
+    ...premios.map(pr => ({ nome: pr.p.j.nome, valor: pr.valor, motivo: pr.motivo, moeda: 'N' }))
+  ]);
 }
 
 // ===== Jogar com IA =====
@@ -591,17 +634,23 @@ io.on('connection', (socket) => {
   });
 
   // Criar mesa: gera o código; o criador não ocupa lugar até entrar nela
-  socket.on('privada:criar', async ({ id, token, totalPlayers, totalPecas, tipo, aposta }) => {
+  socket.on('privada:criar', async ({ id, token, totalPlayers, totalPecas, tipo, aposta, moedaAposta }) => {
     const conta = await contas.validar(id, token);
     if (!conta) { socket.emit('conta:invalida'); return; }
     socket.data.contaId = conta.id;
     let valorAposta = 0;
+    let moedaDaAposta = 'N';
     if (tipo === 'aposta') {
+      moedaDaAposta = moedaAposta === 'KZ' ? 'KZ' : 'N';
+      const kz = moedaDaAposta === 'KZ';
+      const min = kz ? APOSTA_KZ_MIN : APOSTA_MIN, max = kz ? APOSTA_KZ_MAX : APOSTA_MAX;
       valorAposta = Math.trunc(Number(aposta));
-      if (!(valorAposta >= APOSTA_MIN && valorAposta <= APOSTA_MAX)) {
-        socket.emit('jogo:erro', 'A aposta deve ser entre ' + APOSTA_MIN + ' e ' + APOSTA_MAX + ' moedas.'); return;
+      if (!(valorAposta >= min && valorAposta <= max)) {
+        socket.emit('jogo:erro', 'A aposta deve ser entre ' + min + ' e ' + max + (kz ? ' KZ.' : ' moedas.')); return;
       }
-      if (conta.moedas < valorAposta) { socket.emit('jogo:erro', 'Não tens moedas suficientes para esta aposta.'); return; }
+      if ((kz ? conta.saldoKz : conta.moedas) < valorAposta) {
+        socket.emit('jogo:erro', kz ? 'Não tens saldo KZ suficiente para esta aposta.' : 'Não tens moedas suficientes para esta aposta.'); return;
+      }
     } else if (tipo && tipo !== 'normal') { return; }
     if (listaDoDono(conta.id).length >= 5) {
       socket.emit('jogo:erro', 'Já tens 5 mesas privadas. Apaga uma para criar outra.');
@@ -614,6 +663,7 @@ io.on('connection', (socket) => {
     sala.codigo = gerarCodigo();
     sala.donoId = conta.id;
     sala.aposta = valorAposta;
+    sala.moedaAposta = moedaDaAposta;
     avisarTodosDaListaDeSalas();
     socket.emit('privada:criada', { codigo: sala.codigo, salaId: sala.id });
   });
@@ -636,8 +686,8 @@ io.on('connection', (socket) => {
     const jaSentado = Object.values(salas).some(s => s.jogadores.some(j =>
       !j.desconectado && (j.socketId === socket.id || (s.id === sala.id && j.contaId === conta.id))));
     if (jaSentado) { socket.emit('jogo:erro', 'Já estás numa sala.'); return; }
-    if (sala.aposta > 0 && conta.moedas < sala.aposta) {
-      socket.emit('jogo:erro', 'Esta mesa tem aposta de ' + sala.aposta + ' moedas e não tens o suficiente.'); return;
+    if (sala.aposta > 0 && !temSaldoParaAposta(conta, sala)) {
+      socket.emit('jogo:erro', 'Esta mesa tem aposta de ' + sala.aposta + ' ' + unidade(sala) + ' e não tens saldo suficiente.'); return;
     }
     entrarNaSala(socket, sala, conta.nome);
   });
@@ -675,7 +725,7 @@ io.on('connection', (socket) => {
       const jaNoutra = Object.values(salas).some(s => s.jogadores.some(j => !j.desconectado && j.socketId === socket.id));
       if (jaNoutra) { socket.emit('jogo:erro', 'Já estás numa sala.'); return; }
       if (sala.jogadores.length >= sala.totalPlayers) { socket.emit('jogo:erro', 'Essa mesa já está cheia.'); return; }
-      if (sala.aposta > 0 && conta.moedas < sala.aposta) { socket.emit('jogo:erro', 'Não tens moedas suficientes para a aposta (' + sala.aposta + ').'); return; }
+      if (sala.aposta > 0 && !temSaldoParaAposta(conta, sala)) { socket.emit('jogo:erro', 'Não tens saldo suficiente para a aposta (' + sala.aposta + ' ' + unidade(sala) + ').'); return; }
       entrarNaSala(socket, sala, conta.nome);   // o criador entra no próprio jogo
     }
     sala.confirmando = true;
@@ -771,7 +821,7 @@ io.on('connection', (socket) => {
     if (Date.now() - (sala.convites[amigoId] || 0) < 60000) return falha('Já o convidaste há pouco. Espera um minuto.');
     sala.convites[amigoId] = Date.now();
     io.to('conta-' + amigoId).emit('amigos:convite', {
-      de: conta.nome, codigo: sala.codigo, aposta: sala.aposta || 0, totalPlayers: sala.totalPlayers, segundos: 60
+      de: conta.nome, codigo: sala.codigo, aposta: sala.aposta || 0, moedaAposta: sala.moedaAposta || 'N', totalPlayers: sala.totalPlayers, segundos: 60
     });
     socket.emit('amigos:aviso', { texto: 'Convite enviado.' });
   });

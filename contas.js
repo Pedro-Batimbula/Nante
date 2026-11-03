@@ -729,7 +729,66 @@ async function resumoKz() {
   }
 }
 
+// ===== Apostas em KZ =====
+// Cobra (valor negativo) ou devolve (valor positivo) KZ a um jogador, num só comando.
+async function mexerKz(jogadorId, valor, tipo) {
+  if (!pool) return SEM_BD;
+  const n = Number(jogadorId), v = Math.trunc(Number(valor));
+  if (!Number.isInteger(n) || !v) return { erro: 'Pedido inválido.' };
+  try {
+    const r = await pool.query(
+      `WITH u AS (
+         UPDATE nante_contas SET saldo_kz = saldo_kz + $2::int
+         WHERE id = $1 AND saldo_kz + $2::int >= 0 RETURNING id, nome, saldo_kz
+       ), m AS (
+         INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+         SELECT id, nome, $3::text, $2::int FROM u
+       )
+       SELECT saldo_kz FROM u`,
+      [n, v, String(tipo || 'outro')]
+    );
+    if (!r.rowCount) return { erro: 'Saldo KZ insuficiente.' };
+    return { saldoKz: Number(r.rows[0].saldo_kz) };
+  } catch (e) {
+    console.error('Contas: erro nos KZ:', e.message);
+    return { erro: 'Não foi possível atualizar o saldo KZ.' };
+  }
+}
+
+// Fim de uma aposta em KZ: o vencedor recebe o prémio e a taxa vai para a conta geral (tudo ou nada)
+async function pagarApostaKz(vencedorId, premio, taxa) {
+  if (!pool) return SEM_BD;
+  const n = Number(vencedorId), p = Math.trunc(Number(premio)), t = Math.trunc(Number(taxa));
+  if (!Number.isInteger(n) || !(p >= 0) || !(t >= 0)) return { erro: 'Pedido inválido.' };
+  try {
+    const r = await pool.query(
+      `WITH u AS (
+         UPDATE nante_contas SET saldo_kz = saldo_kz + $2::int
+         WHERE id = $1 RETURNING id, nome, saldo_kz
+       ), g AS (
+         UPDATE nante_conta_geral SET saldo_kz = saldo_kz + $3::int
+         WHERE id = 1 AND EXISTS (SELECT 1 FROM u)
+       ), m1 AS (
+         INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+         SELECT id, nome, 'premio', $2::int FROM u
+       ), m2 AS (
+         INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+         SELECT NULL::int, NULL::text, 'taxa', $3::int
+         WHERE $3::int > 0 AND EXISTS (SELECT 1 FROM u)
+       )
+       SELECT saldo_kz FROM u`,
+      [n, p, t]
+    );
+    if (!r.rowCount) return { erro: 'Conta do vencedor não encontrada.' };
+    return { saldoKz: Number(r.rows[0].saldo_kz) };
+  } catch (e) {
+    console.error('Contas: erro ao pagar aposta KZ:', e.message);
+    return { erro: 'Não foi possível pagar a aposta.' };
+  }
+}
+
 module.exports = {
+  mexerKz, pagarApostaKz,
   resumoKz,
   pedirLevantamento, listarLevantamentosPendentes, decidirLevantamento,
   inventario, comprarItem, equiparItem,
