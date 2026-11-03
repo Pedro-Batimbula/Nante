@@ -392,6 +392,54 @@
   .kz-foto-linha label{ cursor: pointer; }
   .kz-msg{ min-height: 18px; margin-top: 8px; text-align: center; font-size: 13px; }
 
+  /* ===== Loja ===== */
+  .m-loja{
+    width: 100%; height: 64px; margin-bottom: 10px; border-radius: 16px;
+    flex-direction: row; justify-content: center; align-items: center; gap: 10px;
+    background: linear-gradient(to bottom, #f6b93b, #c98a0b); box-shadow: 0 5px 0 #8a5d00, 0 9px 14px rgba(0,0,0,.4);
+  }
+  .m-loja b{ font-size: 28px; }
+  .m-loja span{ font-size: 16px; font-weight: bold; }
+  .loja-saldos{
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 8px 12px;
+    border-radius: 12px; background: rgba(0,0,0,.35); font: 900 16px 'Trebuchet MS', Arial, sans-serif;
+  }
+  .loja-saldos .moeda{ width: 22px; height: 22px; }
+  .loja-saldos b{ color: #ffd400; }
+  .loja-saldos .loja-kz b{ color: #2ecc71; }
+  #lojaMsg{ min-height: 18px; margin-bottom: 10px; text-align: center; font-size: 13px; color: #ffd400; }
+  .loja-lista{ list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .loja-item{
+    display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+  }
+  .loja-item.tem{ border-color: rgba(46,204,113,.7); }
+  .loja-previa{ width: 56px; height: 56px; flex: none; display: grid; place-items: center; }
+  .loja-info{ flex: 1; min-width: 0; }
+  .loja-info b{ display: block; font-size: 14px; }
+  .loja-info small{ display: block; font-size: 11px; color: rgba(255,255,255,.65); }
+  .loja-preco{ display: flex; align-items: center; gap: 4px; margin-top: 4px; font: 900 14px 'Trebuchet MS', Arial, sans-serif; color: #ffd400; }
+  .loja-preco.kz{ color: #2ecc71; }
+  .loja-preco .moeda{ width: 18px; height: 18px; }
+  .loja-acao{ flex: none; }
+  .previa-peca{
+    width: 40px; height: 40px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 3px 0 rgba(0,0,0,.45);
+    background: radial-gradient(circle at 35% 30%, #8fcbf5, var(--azul));
+  }
+  .previa-peca.brilho{ box-shadow: 0 0 0 3px #ffd400, 0 0 14px 5px rgba(255,212,0,.8); }
+  .previa-peca.cristal{ background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(150,220,255,.45) 60%, rgba(80,170,255,.35)); }
+  .previa-peca.ouro{ background: radial-gradient(circle at 35% 30%, #fff3a6, #d4a017 70%, #8a5d00); }
+  .previa-tab{ width: 54px; height: 54px; border-radius: 12px; border: 2px solid rgba(255,255,255,.6); }
+  .previa-tab.noite{
+    background: radial-gradient(circle at 25% 30%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 70% 60%, #fff 0 1.5px, transparent 2px),
+      radial-gradient(circle at 45% 80%, #fff 0 1px, transparent 2px), linear-gradient(#0b1030, #1a1f4d);
+  }
+  .previa-tab.neve{
+    background: radial-gradient(circle at 30% 30%, #fff 0 2px, transparent 3px), radial-gradient(circle at 70% 55%, #fff 0 2px, transparent 3px),
+      linear-gradient(#bfe6ff, #6fb7e8);
+  }
+  .previa-tab.vulcao{ background: linear-gradient(#3b0d0d, #c0391b 70%, #ff9f1c); }
+
   /* ===== Amigos ===== */
   .m-amigos{ position: relative; background: linear-gradient(to bottom, #3498db, #1f6fa8); box-shadow: 0 5px 0 #144a73, 0 9px 14px rgba(0,0,0,.4); }
   .m-amigos i, #pedidosBadge{
@@ -971,6 +1019,26 @@
       <button type="button" id="abrirPrivadaBtn" class="modo m-priv"><b>🔒</b><span>Mesa privada</span></button>
       <button type="button" id="abrirAmigosBtn" class="modo m-amigos"><b>👥</b><span>Amigos</span><i id="amigosBadge" hidden>0</i></button>
     </div>
+
+    <button type="button" id="abrirLojaBtn" class="modo m-loja"><b>🛒</b><span>Loja</span></button>
+
+    <section id="lojaPainel" class="privada" hidden>
+      <div class="privada-topo">
+        <h2>Loja</h2>
+        <button type="button" class="btn-mini" id="lojaFecharBtn">Fechar</button>
+      </div>
+      <div class="loja-saldos">
+        <span><svg class="moeda"><use href="#moeda"/></svg> <b id="lojaMoedas">0</b></span>
+        <span class="loja-kz"><b id="lojaKz">0</b> KZ</span>
+      </div>
+      <div class="privada-opcoes" id="lojaAbas">
+        <button type="button" class="ativo" data-aba="dado">Dados</button>
+        <button type="button" data-aba="peca">Peças</button>
+        <button type="button" data-aba="tabuleiro">Estágios</button>
+      </div>
+      <div id="lojaMsg"></div>
+      <ul id="lojaLista" class="loja-lista"></ul>
+    </section>
 
     <section id="amigosPainel" class="privada" hidden>
       <div class="privada-topo">
@@ -2794,6 +2862,144 @@
       btn.disabled = false;
     }
   });
+  /* ===== Loja ===== */
+  const lojaPainel = document.getElementById('lojaPainel');
+  const lojaMsg = document.getElementById('lojaMsg');
+  let lojaItens = [];
+  let lojaAba = 'dado';
+
+  function lojaAviso(t, erro) {
+    lojaMsg.textContent = t;
+    lojaMsg.style.color = erro ? '#ff8a80' : '#ffd400';
+  }
+  function lojaSaldos(moedas, kz) {
+    ['saldoValor', 'perfilMoedas', 'saldoArenaValor'].forEach(id => { document.getElementById(id).textContent = moedas; });
+    document.getElementById('lojaMoedas').textContent = Number(moedas).toLocaleString('pt-PT');
+    ['kzSaldo', 'lojaKz'].forEach(id => { document.getElementById(id).textContent = Number(kz).toLocaleString('pt-PT'); });
+  }
+  async function lojaPost(rota, corpo) {
+    const r = await fetch(rota, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...credenciais(), ...corpo })
+    });
+    const d = await r.json().catch(() => ({}));
+    return r.ok && !d.erro ? d : { erro: d.erro || 'Erro ' + r.status };
+  }
+
+  function previaItem(i) {
+    const caixa = document.createElement('div');
+    caixa.className = 'loja-previa';
+    const d = document.createElement('div');
+    if (i.tipo === 'dado') {
+      desenharDado(d, 5);
+      d.style.width = d.style.height = '46px';
+      d.style.padding = '8px';
+      d.style.background = i.visual.cor;
+      d.style.setProperty('--pip', '#fff');
+    } else {
+      d.className = (i.tipo === 'peca' ? 'previa-peca ' : 'previa-tab ') + (i.visual.estilo || i.visual.tema);
+    }
+    caixa.appendChild(d);
+    return caixa;
+  }
+  function precoItem(i) {
+    const p = document.createElement('div');
+    p.className = 'loja-preco' + (i.moeda === 'KZ' ? ' kz' : '');
+    if (i.moeda === 'KZ') {
+      p.textContent = i.preco.toLocaleString('pt-PT') + ' KZ';
+    } else {
+      p.innerHTML = '<svg class="moeda"><use href="#moeda"/></svg><span></span>';
+      p.querySelector('span').textContent = i.preco.toLocaleString('pt-PT');
+    }
+    return p;
+  }
+
+  function renderLoja() {
+    const ul = document.getElementById('lojaLista');
+    ul.innerHTML = '';
+    const itens = lojaItens.filter(i => i.tipo === lojaAba);
+    if (!itens.length) { ul.innerHTML = '<li>Sem itens nesta secção.</li>'; return; }
+    itens.forEach(i => {
+      const li = document.createElement('li');
+      li.className = 'loja-item' + (i.tem ? ' tem' : '');
+      const info = document.createElement('div');
+      info.className = 'loja-info';
+      const nomeEl = document.createElement('b');
+      nomeEl.textContent = i.nome;
+      const desc = document.createElement('small');
+      desc.textContent = i.descricao;
+      info.append(nomeEl, desc);
+      if (!i.tem) info.appendChild(precoItem(i));
+      const acao = document.createElement('div');
+      acao.className = 'loja-acao';
+      acao.appendChild(i.tem
+        ? botaoMini(i.equipado ? 'Equipado ✓' : 'Equipar', b => equiparItemLoja(i, b))
+        : botaoMini('Comprar', b => comprarItemLoja(i, b)));
+      li.append(previaItem(i), info, acao);
+      ul.appendChild(li);
+    });
+  }
+
+  async function lojaCarregar() {
+    if (!sessao) return;
+    try {
+      const r = await fetch('/loja/lista', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credenciais())
+      });
+      if (!r.ok) { lojaAviso('Erro ' + r.status + ' ao abrir a loja.', true); return; }
+      const d = await r.json();
+      lojaItens = d.itens;
+      lojaSaldos(d.moedas, d.saldoKz);
+      renderLoja();
+    } catch (e) { lojaAviso('Sem ligação ao servidor.', true); }
+  }
+
+  async function comprarItemLoja(i, botao) {
+    const preco = i.preco.toLocaleString('pt-PT') + (i.moeda === 'KZ' ? ' KZ' : ' moedas');
+    if (!window.confirm('Comprar "' + i.nome + '" por ' + preco + '?')) return;
+    botao.disabled = true;
+    lojaAviso('A comprar...');
+    try {
+      const d = await lojaPost('/loja/comprar', { itemId: i.id });
+      if (d.erro) { lojaAviso(d.erro, true); return; }
+      lojaSaldos(d.moedas, d.saldoKz);
+      lojaAviso('Comprado: ' + i.nome + ' ✓');
+      await lojaCarregar();
+    } catch (e) {
+      lojaAviso('Sem ligação ao servidor.', true);
+    } finally { botao.disabled = false; }
+  }
+
+  async function equiparItemLoja(i, botao) {
+    botao.disabled = true;
+    try {
+      const d = await lojaPost('/loja/equipar', { itemId: i.id, equipar: !i.equipado });
+      if (d.erro) { lojaAviso(d.erro, true); return; }
+      lojaAviso(i.equipado ? i.nome + ' guardado.' : i.nome + ' equipado ✓');
+      await lojaCarregar();
+    } catch (e) {
+      lojaAviso('Sem ligação ao servidor.', true);
+    } finally { botao.disabled = false; }
+  }
+
+  document.getElementById('abrirLojaBtn').addEventListener('click', () => {
+    lojaPainel.hidden = !lojaPainel.hidden;
+    lojaAviso('');
+    if (!lojaPainel.hidden) {
+      lojaCarregar();
+      lojaPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+  document.getElementById('lojaFecharBtn').addEventListener('click', () => { lojaPainel.hidden = true; });
+  document.getElementById('lojaAbas').addEventListener('click', e => {
+    const b = e.target.closest('button[data-aba]');
+    if (!b) return;
+    lojaAba = b.dataset.aba;
+    document.querySelectorAll('#lojaAbas button').forEach(x => x.classList.toggle('ativo', x === b));
+    renderLoja();
+  });
+
   // com o perfil aberto, o saldo KZ atualiza sozinho (para ver a confirmação do admin)
   setInterval(() => { if (sessao && !perfilPainel.hidden) kzCarregar(); }, 10000);
 
