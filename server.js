@@ -13,6 +13,8 @@ const io = new Server(server);
 app.use('/.well-known', express.static('public/.well-known'));   // ligação ao app Android (passo 4)
 app.use(express.static('public'));
 require('./admin')(app);   // ADMIN
+require('./kz')(app);      // KZ (dinheiro real)
+require('./kz')(app);   // ADMIN
 
 // CONTAS: criar conta (só nome) e validar a sessão guardada no aparelho
 app.use(express.json());
