@@ -1711,17 +1711,27 @@
   }
 
   const sortear = () => 1 + Math.floor(Math.random() * 6);
-  let dadoEquipado = null;   // cor do dado equipado (só aparece no teu ecrã)
+  let dadoEquipado = null;
+  let equipadosPorIndice = {};   // { indice: { dado, peca, tabuleiro } } vindo do servidor
+  const itemEquipado = (j, tipo) => {
+    const e = equipadosPorIndice[j];
+    return e && e[tipo] ? lojaItens.find(x => String(x.id) === String(e[tipo])) : null;
+  };
+  function corDoDado(j) {
+    const it = itemEquipado(j, 'dado');
+    return it && it.visual ? it.visual.cor : null;
+  }
 
   // Dado, peças e estágio equipados: só no teu ecrã
   function atualizarEquipados() {
     atualizarDadoEquipado();
     const eq = t => lojaItens.find(x => x.tipo === t && x.equipado);
     const pc = eq('peca'), tb = eq('tabuleiro');
-    const estiloPeca = pc && pc.visual ? pc.visual.estilo : null;
+    const estiloDe = j => { const it = itemEquipado(j, 'peca'); return it && it.visual ? it.visual.estilo : null; };
     pecas.forEach(p => {
       ['brilho', 'cristal', 'ouro'].forEach(s => p.classList.remove('sk-' + s));
-      if (estiloPeca && Number(p.dataset.jogador) === meuIndice) p.classList.add('sk-' + estiloPeca);
+      const s = estiloDe(Number(p.dataset.jogador));
+      if (s) p.classList.add('sk-' + s);
     });
     ['noite', 'neve', 'vulcao'].forEach(t => board.classList.remove('tema-' + t));
     if (tb && tb.visual && tb.visual.tema) board.classList.add('tema-' + tb.visual.tema);
@@ -1732,13 +1742,14 @@
   }
 
   // Mostra N dados (e fichas de bónus, ex.: +20) e devolve os elementos dos dados
-  function mostrarDados(valores, bonus, meus) {
+  function mostrarDados(valores, bonus, dono) {
     dadosBox.innerHTML = '';
     const els = valores.map(v => {
       const el = document.createElement('div');
       dadosBox.appendChild(el);
       desenharDado(el, v);
-      if (meus && dadoEquipado) { el.style.background = dadoEquipado; el.style.setProperty('--pip', '#fff'); }
+      const cor = corDoDado(dono);
+      if (cor) { el.style.background = cor; el.style.setProperty('--pip', '#fff'); }
       return el;
     });
     (bonus || []).forEach(b => {
@@ -1778,7 +1789,7 @@
     atualizarBotao();
 
     const n = estado.quantidadeProximaRolagem || estado.quantidadeBase || 2;
-    const els = mostrarDados(Array.from({ length: n }, sortear), undefined, true);
+    const els = mostrarDados(Array.from({ length: n }, sortear), undefined, meuIndice);
     els.forEach(el => el.classList.add('rolando'));
 
     let voltas = 0;
@@ -3269,7 +3280,8 @@
     mostrarDados([]);
     limparSelecao();
     jogoIniciado = true;
-    lojaCarregar();   // traz o dado equipado
+    lojaCarregar();   // traz o catálogo da loja
+    socket.emit('jogo:pedirEquipados');
     document.getElementById('saldoArena').hidden = false;
     limparHistorico();
     chatHist.hidden = true;
@@ -3283,9 +3295,14 @@
   });
 
   /* ===== Eventos do jogo ===== */
+  socket.on('jogo:equipados', d => {
+    equipadosPorIndice = d || {};
+    atualizarEquipados();
+  });
+
   socket.on('jogo:dadosRolados', ({ jogador, dados }) => {
     pararAnimacao();
-    mostrarDados(dados, undefined, jogador === meuIndice);
+    mostrarDados(dados, undefined, jogador);
     ultimaRolagem = { jogador, dados };
   });
 
@@ -3309,7 +3326,7 @@
       if (pendente) texto += depois === meuIndice ? ' — escolhe uma peça' : '';
       else texto += depois !== r.jogador ? ' — passa a vez' : ' — joga outra vez';
     } else {
-      if (pendente) mostrarDados(estado.dadosDisponiveis, estado.bonusesCaptura, depois === meuIndice);
+      if (pendente) mostrarDados(estado.dadosDisponiveis, estado.bonusesCaptura, depois);
       if (pendente) texto = depois === meuIndice ? 'ainda tens jogadas' : '';
       else texto = depois !== ativoAntes ? nome(ativoAntes) + ' terminou' : 'joga outra vez';
     }
