@@ -102,7 +102,7 @@ async function validar(id, token) {
   try {
     let linha;
     if (pool) {
-      const r = await pool.query('SELECT id, nome, token_hash, senha_hash, moedas, vitorias, jogos FROM nante_contas WHERE id = $1', [n]);
+      const r = await pool.query('SELECT id, nome, token_hash, senha_hash, moedas, vitorias, jogos, saldo_kz FROM nante_contas WHERE id = $1', [n]);
       linha = r.rows[0];
     } else {
       linha = memoria.find(j => j.id === n);
@@ -112,7 +112,8 @@ async function validar(id, token) {
     const b = Buffer.from(linha.token_hash, 'hex');
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
     return { id: linha.id, nome: linha.nome, temSenha: !!linha.senha_hash,
-      moedas: linha.moedas, vitorias: linha.vitorias, jogos: linha.jogos };
+      moedas: linha.moedas, vitorias: linha.vitorias, jogos: linha.jogos,
+      saldoKz: Number(linha.saldo_kz || 0) };
   } catch (e) {
     console.error('Contas: erro ao validar:', e.message);
     return null;
@@ -422,7 +423,115 @@ async function amizadePorLink(novoId, anfitriaoId) {
   }
 }
 
+// ===== Dinheiro real (KZ) =====
+const DEP_MIN = 500, LEV_MIN = 1000, MAX_FOTO = 2 * 1024 * 1024, MAX_DEP_PENDENTES = 3;
+
+// Número para onde os jogadores mandam o dinheiro (o admin pode mudar quando quiser)
+async function numeroDeposito() {
+  if (!pool) return '';
+  try {
+    const r = await pool.query("SELECT valor FROM nante_config WHERE chave = 'numero_deposito'");
+    return r.rows[0] ? r.rows[0].valor : '';
+  } catch (e) { return ''; }
+}
+
+async function definirNumeroDeposito(valor) {
+  if (!pool) return SEM_BD;
+  const v = String(valor || '').trim().slice(0, 40);
+  try {
+    await pool.query(
+      "INSERT INTO nante_config (chave, valor) VALUES ('numero_deposito', $1) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
+      [v]
+    );
+    return { ok: true, numero: v };
+  } catch (e) {
+    console.error('Contas: erro ao guardar o número de depósito:', e.message);
+    return { erro: 'Não foi possível guardar o número.' };
+  }
+}
+
+// jogador = { id, nome } (já validado); foto = Buffer com o comprovativo
+async function pedirDeposito(jogador, valorBruto, foto) {
+  if (!pool) return SEM_BD;
+  const valor = Math.trunc(Number(valorBruto));
+  if (!Number.isInteger(valor) || valor < DEP_MIN) return { erro: 'O depósito mínimo é de ' + DEP_MIN + ' KZ.' };
+  if (!Buffer.isBuffer(foto) || !foto.length) return { erro: 'Envia a foto do comprovativo.' };
+  if (foto.length > MAX_FOTO) return { erro: 'A foto é demasiado grande.' };
+  try {
+    const p = await pool.query(
+      "SELECT COUNT(*)::int AS n FROM nante_depositos WHERE jogador_id = $1 AND estado = 'pendente'",
+      [jogador.id]
+    );
+    if (p.rows[0].n >= MAX_DEP_PENDENTES) return { erro: 'Já tens depósitos à espera de confirmação.' };
+    const r = await pool.query(
+      'INSERT INTO nante_depositos (jogador_id, nome, valor, comprovativo) VALUES ($1, $2, $3, $4) RETURNING id',
+      [jogador.id, jogador.nome, valor, foto]
+    );
+    return { ok: true, id: r.rows[0].id, valor, nome: jogador.nome };
+  } catch (e) {
+    console.error('Contas: erro ao pedir depósito:', e.message);
+    return { erro: 'Não foi possível enviar o depósito.' };
+  }
+}
+
+// Fila do admin (sem as fotos, só os dados)
+async function listarDepositosPendentes() {
+  if (!pool) return [];
+  try {
+    const r = await pool.query("SELECT id, nome, valor, criado_em FROM nante_depositos WHERE estado = 'pendente' ORDER BY id");
+    return r.rows;
+  } catch (e) { return []; }
+}
+
+// A foto só existe enquanto o depósito está pendente
+async function fotoDeposito(id) {
+  const n = Number(id);
+  if (!pool || !Number.isInteger(n)) return null;
+  try {
+    const r = await pool.query("SELECT comprovativo FROM nante_depositos WHERE id = $1 AND estado = 'pendente'", [n]);
+    return r.rows[0] ? r.rows[0].comprovativo : null;
+  } catch (e) { return null; }
+}
+
+// Admin confirma (soma o saldo KZ e regista o movimento) ou rejeita. Em ambos a foto é apagada.
+async function decidirDeposito(id, confirmar) {
+  if (!pool) return SEM_BD;
+  const n = Number(id);
+  if (!Number.isInteger(n)) return { erro: 'Pedido inválido.' };
+  try {
+    if (confirmar) {
+      const r = await pool.query(
+        `WITH d AS (
+           UPDATE nante_depositos SET estado = 'confirmado', decidido_em = now(), comprovativo = NULL
+           WHERE id = $1 AND estado = 'pendente' RETURNING jogador_id, valor
+         ), c AS (
+           UPDATE nante_contas SET saldo_kz = saldo_kz + d.valor
+           FROM d WHERE nante_contas.id = d.jogador_id
+           RETURNING nante_contas.id, nante_contas.nome, nante_contas.saldo_kz
+         ), m AS (
+           INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+           SELECT c.id, c.nome, 'deposito', d.valor FROM c, d
+         )
+         SELECT id, saldo_kz FROM c`,
+        [n]
+      );
+      if (!r.rowCount) return { erro: 'Esse depósito já foi tratado.' };
+      return { ok: true, confirmado: true, jogadorId: r.rows[0].id, saldoKz: Number(r.rows[0].saldo_kz) };
+    }
+    const r = await pool.query(
+      "UPDATE nante_depositos SET estado = 'rejeitado', decidido_em = now(), comprovativo = NULL WHERE id = $1 AND estado = 'pendente' RETURNING jogador_id",
+      [n]
+    );
+    if (!r.rowCount) return { erro: 'Esse depósito já foi tratado.' };
+    return { ok: true, confirmado: false, jogadorId: r.rows[0].jogador_id };
+  } catch (e) {
+    console.error('Contas: erro ao decidir depósito:', e.message);
+    return { erro: 'Não foi possível tratar o depósito.' };
+  }
+}
+
 module.exports = {
+  numeroDeposito, definirNumeroDeposito, pedirDeposito, listarDepositosPendentes, fotoDeposito, decidirDeposito,
   diagnostico,
   iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado,
   pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink, procurarJogadores

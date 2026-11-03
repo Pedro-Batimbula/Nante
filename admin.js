@@ -4,6 +4,9 @@
 
 const crypto = require('crypto');
 const historico = require('./historico');
+const contas = require('./contas');
+const express = require('express');
+const json = express.json({ limit: '10kb' });
 
 function igual(a, b) {
   const ha = crypto.createHash('sha256').update(String(a)).digest();
@@ -28,6 +31,32 @@ module.exports = function (app) {
   app.get('/admin/dados', autenticar, (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json(historico.resumo());
+  });
+
+  // ===== Dinheiro real (KZ): depósitos =====
+  app.get('/admin/kz', autenticar, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      numero: await contas.numeroDeposito(),
+      pendentes: await contas.listarDepositosPendentes()
+    });
+  });
+  app.post('/admin/kz/numero', autenticar, json, async (req, res) => {
+    if (!req.is('application/json')) return res.status(400).json({ erro: 'Pedido inválido.' });
+    const r = await contas.definirNumeroDeposito(req.body && req.body.numero);
+    res.status(r.erro ? 400 : 200).json(r);
+  });
+  app.get('/admin/kz/foto/:id', autenticar, async (req, res) => {
+    const foto = await contas.fotoDeposito(req.params.id);
+    if (!foto) return res.status(404).send('Sem foto.');
+    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
+    res.send(foto);
+  });
+  app.post('/admin/kz/decidir', autenticar, json, async (req, res) => {
+    if (!req.is('application/json')) return res.status(400).json({ erro: 'Pedido inválido.' });
+    const b = req.body || {};
+    const r = await contas.decidirDeposito(b.id, b.confirmar === true);
+    res.status(r.erro ? 400 : 200).json(r);
   });
 };
 
@@ -76,6 +105,19 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--azul);outline-o
 .jog i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .jog.saiu{color:var(--suave);text-decoration:line-through}
 .vazio{padding:28px 16px;color:var(--suave)}
+.kz{margin-bottom:28px}
+#kzBadge{margin-left:8px;font-size:13px;font-weight:500;color:var(--amarelo)}
+.kz-config{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.kz-config input{font:inherit;font-size:14px;flex:1 1 200px;min-width:0;padding:7px 12px;border:1px solid var(--linha);border-radius:8px;background:var(--painel);color:var(--tinta)}
+.kz-config button,.kz-botoes button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--linha);border-radius:8px;background:var(--painel);color:var(--tinta);cursor:pointer}
+.kz-item{padding:12px 16px;border-top:1px solid var(--linha)}
+.kz-item:first-child{border-top:0}
+.kz-topo{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.kz-valor{font-weight:600;color:var(--verde);font-variant-numeric:tabular-nums}
+.kz-botoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.kz-botoes .ok{background:var(--verde);color:#fff;border-color:var(--verde)}
+.kz-botoes .no{color:var(--vermelho);border-color:var(--vermelho)}
+.kz-foto{display:block;max-width:100%;max-height:70vh;margin-top:10px;border-radius:8px;border:1px solid var(--linha)}
 .nota{color:var(--suave);font-size:13px;margin-top:10px}
 @media (max-width:700px){
   .cab{display:none}
@@ -88,6 +130,16 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--azul);outline-o
 <main>
   <h1>Histórico de jogos</h1>
   <p class="sub" id="atualizado">A carregar…</p>
+
+  <section class="kz">
+    <h2>Depósitos KZ<span id="kzBadge"></span></h2>
+    <div class="kz-config">
+      <input id="kzNumero" type="text" maxlength="40" placeholder="Número para receber depósitos (Express)">
+      <button id="kzNumeroBtn" type="button">Guardar número</button>
+      <span id="kzMsg" class="nota"></span>
+    </div>
+    <div class="lista" id="kzLista"></div>
+  </section>
 
   <div class="totais" id="totais"></div>
 
@@ -199,8 +251,71 @@ document.getElementById('filtros').addEventListener('click', function (e) {
 });
 document.getElementById('busca').addEventListener('input', render);
 
+var kzAbertos = {}, kzSig = '';
+
+function kzCarregar() {
+  fetch('/admin/kz', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      var campo = document.getElementById('kzNumero');
+      if (document.activeElement !== campo) campo.value = d.numero || '';
+      var n = d.pendentes.length;
+      document.title = (n ? '(' + n + ') ' : '') + 'Nante – admin';
+      document.getElementById('kzBadge').textContent = n ? n + ' por confirmar' : '';
+      var sig = JSON.stringify(d.pendentes.map(function (p) { return p.id; })) + JSON.stringify(kzAbertos);
+      if (sig === kzSig) return;
+      kzSig = sig;
+      var el = document.getElementById('kzLista');
+      if (!n) { el.innerHTML = '<div class="vazio">Nenhum depósito à espera.</div>'; return; }
+      el.innerHTML = d.pendentes.map(function (p) {
+        return '<div class="kz-item" data-id="' + p.id + '">' +
+          '<div class="kz-topo"><b>' + esc(p.nome) + '</b><span class="kz-valor">' + p.valor + ' KZ</span><span class="n">' + fmtData(p.criado_em) + '</span></div>' +
+          '<div class="kz-botoes">' +
+          '<button type="button" data-acao="ver">' + (kzAbertos[p.id] ? 'Esconder comprovativo' : 'Ver comprovativo') + '</button>' +
+          '<button type="button" class="ok" data-acao="ok">Confirmar</button>' +
+          '<button type="button" class="no" data-acao="no">Rejeitar</button></div>' +
+          (kzAbertos[p.id] ? '<img class="kz-foto" src="/admin/kz/foto/' + p.id + '" alt="Comprovativo">' : '') +
+          '</div>';
+      }).join('');
+    })
+    .catch(function () {});
+}
+
+document.getElementById('kzLista').addEventListener('click', function (e) {
+  var acao = e.target.getAttribute && e.target.getAttribute('data-acao');
+  if (!acao) return;
+  var item = e.target.closest('.kz-item');
+  var id = Number(item.getAttribute('data-id'));
+  if (acao === 'ver') { kzAbertos[id] = !kzAbertos[id]; kzSig = ''; kzCarregar(); return; }
+  var confirmar = acao === 'ok';
+  var valor = item.querySelector('.kz-valor').textContent;
+  var quem = item.querySelector('b').textContent;
+  if (!window.confirm((confirmar ? 'Confirmar ' : 'Rejeitar ') + valor + ' de ' + quem + '? A foto será apagada.')) return;
+  fetch('/admin/kz/decidir', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id, confirmar: confirmar })
+  }).then(function (r) { return r.json(); })
+    .then(function (d) { if (d.erro) window.alert(d.erro); delete kzAbertos[id]; kzSig = ''; kzCarregar(); })
+    .catch(function () { window.alert('Sem ligação ao servidor.'); });
+});
+
+document.getElementById('kzNumeroBtn').addEventListener('click', function () {
+  var msg = document.getElementById('kzMsg');
+  fetch('/admin/kz/numero', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ numero: document.getElementById('kzNumero').value })
+  }).then(function (r) { return r.json(); })
+    .then(function (d) {
+      msg.textContent = d.erro || 'Guardado ✓';
+      setTimeout(function () { msg.textContent = ''; }, 2000);
+    })
+    .catch(function () { msg.textContent = 'Sem ligação.'; });
+});
+
 carregar();
+kzCarregar();
 setInterval(carregar, 10000);
+setInterval(kzCarregar, 10000);
 </script>
 </body>
 </html>`;
