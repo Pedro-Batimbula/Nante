@@ -2710,7 +2710,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credenciais())
       });
-      if (!r.ok) return;
+      if (!r.ok) { kzAviso('Erro ' + r.status + ' ao ler a carteira.', true); return; }
       const d = await r.json();
       document.getElementById('kzSaldo').textContent = Number(d.saldoKz || 0).toLocaleString('pt-PT');
       kzNumeroAtual = d.numero || '';
