@@ -530,8 +530,98 @@ async function decidirDeposito(id, confirmar) {
   }
 }
 
+// ===== Loja =====
+const SEM_LOJA = { erro: 'A loja precisa da base de dados.' };
+
+// Itens que o jogador já tem: [{ item_id, tipo, equipado }]
+async function inventario(jogadorId) {
+  const n = Number(jogadorId);
+  if (!pool || !Number.isInteger(n)) return [];
+  try {
+    const r = await pool.query('SELECT item_id, tipo, equipado FROM nante_inventario WHERE jogador_id = $1', [n]);
+    return r.rows;
+  } catch (e) { return []; }
+}
+
+// Cada compra é um só comando: debita, entrega o item e regista (ou falha sem mexer em nada)
+const SQL_COMPRA_N = `
+  WITH d AS (
+    UPDATE nante_contas SET moedas = moedas - $3::int
+    WHERE id = $1 AND moedas >= $3::int RETURNING id, moedas, saldo_kz
+  ), i AS (
+    INSERT INTO nante_inventario (jogador_id, item_id, tipo, preco_pago, moeda)
+    SELECT id, $2::text, $4::text, $3::int, 'N' FROM d
+  ), m AS (
+    INSERT INTO moedas_movimentos (jogador_id, valor, motivo)
+    SELECT id, -($3::int), 'compra_loja' FROM d
+  )
+  SELECT moedas, saldo_kz FROM d`;
+
+// Com KZ, o valor sobe a conta geral (receita da casa)
+const SQL_COMPRA_KZ = `
+  WITH d AS (
+    UPDATE nante_contas SET saldo_kz = saldo_kz - $3::int
+    WHERE id = $1 AND saldo_kz >= $3::int RETURNING id, nome, moedas, saldo_kz
+  ), i AS (
+    INSERT INTO nante_inventario (jogador_id, item_id, tipo, preco_pago, moeda)
+    SELECT id, $2::text, $4::text, $3::int, 'KZ' FROM d
+  ), g AS (
+    UPDATE nante_conta_geral SET saldo_kz = saldo_kz + $3::int
+    WHERE id = 1 AND EXISTS (SELECT 1 FROM d)
+  ), m AS (
+    INSERT INTO nante_movimentos_kz (jogador_id, nome, tipo, valor)
+    SELECT id, nome, 'compra', -($3::int) FROM d
+  )
+  SELECT moedas, saldo_kz FROM d`;
+
+// item = { id, tipo, preco, moeda } vindo do catálogo do servidor (nunca do cliente)
+async function comprarItem(jogadorId, item) {
+  if (!pool) return SEM_LOJA;
+  const n = Number(jogadorId);
+  if (!Number.isInteger(n) || !item || !Number.isInteger(item.preco) || item.preco <= 0 ||
+      !['N', 'KZ'].includes(item.moeda)) return { erro: 'Pedido inválido.' };
+  try {
+    const t = await pool.query('SELECT 1 FROM nante_inventario WHERE jogador_id = $1 AND item_id = $2', [n, item.id]);
+    if (t.rowCount) return { erro: 'Já tens este item.' };
+    const r = await pool.query(item.moeda === 'KZ' ? SQL_COMPRA_KZ : SQL_COMPRA_N, [n, item.id, item.preco, item.tipo]);
+    if (!r.rowCount) return { erro: item.moeda === 'KZ' ? 'Saldo KZ insuficiente.' : 'Moedas N insuficientes.' };
+    return { ok: true, moedas: r.rows[0].moedas, saldoKz: Number(r.rows[0].saldo_kz) };
+  } catch (e) {
+    if (e.code === '23505') return { erro: 'Já tens este item.' };   // duplo clique
+    console.error('Contas: erro na compra:', e.message);
+    return { erro: 'Não foi possível comprar.' };
+  }
+}
+
+// Equipa (ou tira) um item. Só um equipado por tipo.
+async function equiparItem(jogadorId, itemId, equipar) {
+  if (!pool) return SEM_LOJA;
+  const n = Number(jogadorId);
+  if (!Number.isInteger(n)) return { erro: 'Pedido inválido.' };
+  let c;
+  try {
+    const t = await pool.query('SELECT tipo FROM nante_inventario WHERE jogador_id = $1 AND item_id = $2', [n, String(itemId)]);
+    if (!t.rowCount) return { erro: 'Ainda não tens este item.' };
+    const tipo = t.rows[0].tipo;
+    if (tipo === 'extra') return { erro: 'Este item não se equipa.' };
+    c = await pool.connect();
+    await c.query('BEGIN');
+    await c.query('UPDATE nante_inventario SET equipado = false WHERE jogador_id = $1 AND tipo = $2 AND equipado', [n, tipo]);
+    if (equipar) await c.query('UPDATE nante_inventario SET equipado = true WHERE jogador_id = $1 AND item_id = $2', [n, String(itemId)]);
+    await c.query('COMMIT');
+    return { ok: true };
+  } catch (e) {
+    if (c) await c.query('ROLLBACK').catch(() => {});
+    console.error('Contas: erro ao equipar:', e.message);
+    return { erro: 'Não foi possível equipar.' };
+  } finally {
+    if (c) c.release();
+  }
+}
+
 module.exports = {
-  numeroDeposito, definirNumeroDeposito, pedirDeposito, listarDepositosPendentes, fotoDeposito, decidirDeposito,
+  inventario, comprarItem, equiparItem,
+  DEP_MIN, LEV_MIN, numeroDeposito, definirNumeroDeposito, pedirDeposito, listarDepositosPendentes, fotoDeposito, decidirDeposito,
   diagnostico,
   iniciar, criar, validar, definirSenha, entrar, mexerMoedas, registarResultado,
   pedirAmizade, responderPedido, removerAmizade, listarAmigos, idsDosAmigos, amizadePorLink, procurarJogadores
