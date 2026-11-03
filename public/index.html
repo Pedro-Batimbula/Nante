@@ -376,6 +376,22 @@
   .barra i{ display: block; height: 100%; width: 0; background: linear-gradient(to right, #2ecc71, #ffd400); transition: width .6s; }
   #perfilPainel #sairContaBtn{ width: 100%; }
 
+  /* ===== Carteira KZ ===== */
+  .kz-carteira{ margin: 0 0 14px; padding: 12px; border-radius: 14px; background: rgba(46,204,113,.1); border: 1px solid rgba(46,204,113,.55); }
+  .kz-carteira .kz-topo{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .kz-rot{ font-size: 12px; color: rgba(255,255,255,.7); }
+  .kz-saldo{ font: 900 24px 'Trebuchet MS', Arial, sans-serif; color: #2ecc71; }
+  .kz-saldo b{ font: inherit; }
+  .kz-form{ margin-top: 10px; }
+  #kzValor{
+    display: block; width: 100%; margin: 6px 0 10px; padding: 10px; color: #fff;
+    font: 16px 'Trebuchet MS', Arial, sans-serif;
+    background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.35); border-radius: 10px;
+  }
+  .kz-foto-linha{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; color: rgba(255,255,255,.75); }
+  .kz-foto-linha label{ cursor: pointer; }
+  .kz-msg{ min-height: 18px; margin-top: 8px; text-align: center; font-size: 13px; }
+
   /* ===== Amigos ===== */
   .m-amigos{ position: relative; background: linear-gradient(to bottom, #3498db, #1f6fa8); box-shadow: 0 5px 0 #144a73, 0 9px 14px rgba(0,0,0,.4); }
   .m-amigos i, #pedidosBadge{
@@ -888,6 +904,29 @@
         <div><b id="stPerc">0%</b><span>Taxa de vitória</span></div>
       </div>
       <div class="barra"><i id="stBarra"></i></div>
+
+      <div class="kz-carteira">
+        <div class="kz-topo">
+          <div>
+            <span class="kz-rot">Carteira KZ</span>
+            <div class="kz-saldo"><b id="kzSaldo">0</b> KZ</div>
+          </div>
+          <button type="button" class="btn-mini btn-destaque" id="kzDepositarBtn">Depositar</button>
+        </div>
+        <div id="kzForm" class="kz-form" hidden>
+          <p class="privada-nota">1) Envia o dinheiro por Express para: <b id="kzNumero">...</b> <button type="button" class="btn-mini" id="kzCopiarBtn" hidden>Copiar</button></p>
+          <p class="privada-nota">2) Indica o valor enviado (mínimo <span id="kzMinTxt">500</span> KZ) e a foto do comprovativo.</p>
+          <input id="kzValor" type="number" inputmode="numeric" min="500" placeholder="Valor em KZ">
+          <div class="kz-foto-linha">
+            <label class="btn-mini" for="kzFicheiro">Escolher foto</label>
+            <span id="kzFotoNome">Nenhuma foto</span>
+            <input id="kzFicheiro" type="file" accept="image/*" hidden>
+          </div>
+          <button type="button" id="kzEnviarBtn" class="btn-mini btn-destaque" style="width:100%">Enviar depósito</button>
+          <p class="privada-nota">A foto é apagada depois de o admin a ver. O saldo sobe quando o pagamento for confirmado.</p>
+        </div>
+        <div id="kzMsg" class="kz-msg"></div>
+      </div>
       <button id="sairContaBtn" type="button" aria-label="Sair da conta">Sair da conta</button>
     </section>
 
@@ -2653,10 +2692,116 @@
   }
   aplicarVoz();
 
+  /* ===== Carteira KZ (dinheiro real): depósito ===== */
+  const kzForm = document.getElementById('kzForm');
+  const kzMsg = document.getElementById('kzMsg');
+  const kzFicheiro = document.getElementById('kzFicheiro');
+  let kzDepMin = 500, kzNumeroAtual = '';
+
+  function kzAviso(t, erro) {
+    kzMsg.textContent = t;
+    kzMsg.style.color = erro ? '#ff8a80' : '#ffd400';
+  }
+
+  async function kzCarregar() {
+    if (!sessao) return;
+    try {
+      const r = await fetch('/kz/info', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credenciais())
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      document.getElementById('kzSaldo').textContent = Number(d.saldoKz || 0).toLocaleString('pt-PT');
+      kzNumeroAtual = d.numero || '';
+      kzDepMin = d.depositoMin || 500;
+      document.getElementById('kzNumero').textContent = kzNumeroAtual || 'ainda não definido';
+      document.getElementById('kzCopiarBtn').hidden = !kzNumeroAtual;
+      document.getElementById('kzValor').min = kzDepMin;
+      document.getElementById('kzMinTxt').textContent = kzDepMin;
+    } catch (e) {}
+  }
+
+  // Reduz a foto (máx. 1280 px, JPEG) antes de enviar
+  function comprimirFoto(ficheiro) {
+    return new Promise((ok, falha) => {
+      const url = URL.createObjectURL(ficheiro);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k);
+        c.height = Math.round(img.height * k);
+        const g = c.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const tentar = q => c.toBlob(b => {
+          if (!b) return falha(new Error('foto'));
+          if (b.size > 1.8 * 1024 * 1024 && q > 0.35) return tentar(q - 0.15);
+          ok(b);
+        }, 'image/jpeg', q);
+        tentar(0.7);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); falha(new Error('foto')); };
+      img.src = url;
+    });
+  }
+
+  document.getElementById('kzDepositarBtn').addEventListener('click', () => {
+    kzForm.hidden = !kzForm.hidden;
+    kzAviso('');
+    kzCarregar();
+  });
+  document.getElementById('kzCopiarBtn').addEventListener('click', e => {
+    if (kzNumeroAtual) copiar(kzNumeroAtual, e.currentTarget);
+  });
+  kzFicheiro.addEventListener('change', () => {
+    document.getElementById('kzFotoNome').textContent = kzFicheiro.files[0] ? kzFicheiro.files[0].name : 'Nenhuma foto';
+  });
+  document.getElementById('kzEnviarBtn').addEventListener('click', async () => {
+    if (!sessao) return;
+    const btn = document.getElementById('kzEnviarBtn');
+    const valor = Math.trunc(Number(document.getElementById('kzValor').value));
+    const f = kzFicheiro.files[0];
+    if (!(valor >= kzDepMin)) { kzAviso('O depósito mínimo é de ' + kzDepMin + ' KZ.', true); return; }
+    if (!f) { kzAviso('Escolhe a foto do comprovativo.', true); return; }
+    btn.disabled = true;
+    kzAviso('A enviar...');
+    try {
+      const foto = await comprimirFoto(f);
+      const r = await fetch('/kz/depositar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'x-conta-id': String(sessao.id),
+          'x-conta-token': sessao.token,
+          'x-valor': String(valor)
+        },
+        body: foto
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.erro) { kzAviso(d.erro || 'Não foi possível enviar.', true); return; }
+      kzFicheiro.value = '';
+      document.getElementById('kzFotoNome').textContent = 'Nenhuma foto';
+      document.getElementById('kzValor').value = '';
+      kzForm.hidden = true;
+      kzAviso('Depósito de ' + d.valor + ' KZ enviado! O saldo sobe quando o admin confirmar.');
+    } catch (e) {
+      kzAviso('Não foi possível ler a foto ou ligar ao servidor.', true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  // com o perfil aberto, o saldo KZ atualiza sozinho (para ver a confirmação do admin)
+  setInterval(() => { if (sessao && !perfilPainel.hidden) kzCarregar(); }, 10000);
+
   function alternarPerfil() {
     perfilPainel.hidden = !perfilPainel.hidden;
     if (!perfilPainel.hidden) {
       pedirPerfil();
+      kzCarregar();
       perfilPainel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
