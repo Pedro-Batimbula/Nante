@@ -1,1 +1,8 @@
-[]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.nante.twa",
+        "sha256_cert_fingerprints": ["E2:08:90:07:28:83:8D:A3:43:E6:34:CA:D7:F1:08:EC:11:CC:F1:F7:03:D9:BA:F1:2A:F2:B3:4B:F4:91:04:D0"]
+      }
+    }]
