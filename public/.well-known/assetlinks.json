@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "com.onrender.nante.twa",
-        "sha256_cert_fingerprints": ["E2:08:90:07:28:83:8D:A3:43:E6:34:CA:D7:F1:08:EC:11:CC:F1:F7:03:D9:BA:F1:2A:F2:B3:4B:F4:91:04:D0"]
+        "sha256_cert_fingerprints": ["E2:08:90:07:28:83:8D:A3:43:E6:34:CA:D7:F1:08:EC:11:CC:F1:F7:03:D9:BA:F1:2A:F2:B3:4B:F4:91:04:D0", "15:98:F6:26:2E:59:2F:5E:6C:38:C7:97:1D:87:5D:D7:98:DE:0D:F0:94:51:8F:D0:19:3A:E0:3E:5F:09:9C:A4"]
       }
     }]
