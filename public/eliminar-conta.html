@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eliminar conta – Nante</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1b1f1b; --muted:#5a645a; --line:#d9e0d9;
+    --accent:#0a3d0a; --danger:#b3261e; --field:#f4f7f4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0d120d; --fg:#e6ece6; --muted:#9aa89a; --line:#26302a;
+           --accent:#7fd07f; --danger:#ff8a80; --field:#151c16; }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0; background:var(--bg); color:var(--fg);
+       font:17px/1.6 Georgia,"Times New Roman",serif}
+  main{max-width:34rem; margin:0 auto; padding:2.5rem 1.25rem 4rem}
+  h1{font-size:1.8rem; line-height:1.2; margin:0 0 .75rem; color:var(--accent)}
+  p{margin:0 0 1rem}
+  ul{margin:0 0 1.5rem; padding-left:1.2rem}
+  label{display:block; margin:1rem 0 .3rem; font-weight:bold}
+  input[type=text], input[type=password]{
+    width:100%; padding:.7rem .8rem; font:inherit; color:var(--fg);
+    background:var(--field); border:1px solid var(--line); border-radius:8px}
+  input:focus-visible, button:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  .check{display:flex; gap:.6rem; align-items:flex-start; margin:1.25rem 0; font-weight:normal}
+  .check input{margin-top:.35rem}
+  button{
+    width:100%; padding:.8rem 1rem; font:inherit; font-weight:bold; cursor:pointer;
+    color:#fff; background:var(--danger); border:0; border-radius:8px}
+  @media (prefers-color-scheme: dark){ button{color:#1b0b0a} }
+  button[disabled]{opacity:.55; cursor:not-allowed}
+  #msg{margin-top:1.25rem; padding:.8rem 1rem; border-radius:8px; display:none}
+  #msg.err{display:block; border:1px solid var(--danger); color:var(--danger)}
+  #msg.ok{display:block; border:1px solid var(--accent); color:var(--accent)}
+  .small{color:var(--muted); font-size:.95rem; margin-top:1.5rem}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Eliminar a minha conta do Nante</h1>
+  <p>Aqui podes eliminar a tua conta do Nante e os dados associados. <strong>Esta ação é definitiva e não pode ser desfeita.</strong></p>
+
+  <p>O que é eliminado:</p>
+  <ul>
+    <li>A tua conta (nome de utilizador e palavra-passe).</li>
+    <li>Os dados de jogo associados à conta.</li>
+  </ul>
+
+  <form id="f" novalidate>
+    <label for="u">Nome de utilizador</label>
+    <input id="u" name="username" type="text" autocomplete="username" autocapitalize="off" required>
+
+    <label for="p">Palavra-passe</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+
+    <label class="check" for="c">
+      <input id="c" type="checkbox">
+      <span>Percebo que a minha conta será eliminada de forma definitiva.</span>
+    </label>
+
+    <button id="b" type="submit" disabled>Eliminar a minha conta</button>
+  </form>
+
+  <div id="msg" role="alert"></div>
+
+  <p class="small">Se não conseguires entrar na conta, escreve-nos para <a href="mailto:[EMAIL DE CONTACTO]">[EMAIL DE CONTACTO]</a> a partir do email da conta e tratamos do pedido. Vê também a nossa <a href="/privacidade.html">Política de Privacidade</a>.</p>
+</main>
+
+<script>
+(function(){
+  var f = document.getElementById('f');
+  var u = document.getElementById('u');
+  var p = document.getElementById('p');
+  var c = document.getElementById('c');
+  var b = document.getElementById('b');
+  var msg = document.getElementById('msg');
+
+  function refresh(){ b.disabled = !(u.value.trim() && p.value && c.checked); }
+  [u, p].forEach(function(el){ el.addEventListener('input', refresh); });
+  c.addEventListener('change', refresh);
+
+  function show(kind, text){ msg.className = kind; msg.textContent = text; }
+
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (b.disabled) return;
+    b.disabled = true;
+    msg.className = ''; msg.textContent = '';
+
+    fetch('/api/eliminar-conta', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username: u.value.trim(), password: p.value })
+    })
+    .then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){ return {ok: r.ok, d: d}; });
+    })
+    .then(function(res){
+      if (res.ok) {
+        f.style.display = 'none';
+        show('ok', 'A tua conta foi eliminada. Obrigado por teres jogado Nante.');
+      } else {
+        show('err', res.d.error || 'Não foi possível eliminar a conta. Verifica o nome de utilizador e a palavra-passe.');
+        refresh();
+      }
+    })
+    .catch(function(){
+      show('err', 'Sem ligação ao servidor. Tenta outra vez dentro de instantes.');
+      refresh();
+    });
+  });
+})();
+</script>
+</body>
+</html>
